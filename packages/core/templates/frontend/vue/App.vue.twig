@@ -1,0 +1,26 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+
+const health = ref<string>('…')
+
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/health')
+    const data: { status: string } = await response.json()
+    health.value = data.status
+  } catch {
+    health.value = 'injoignable'
+  }
+})
+</script>
+
+<template>
+  <main class="brand-hero">
+{% if logo_file %}
+    <img src="/{{ logo_file }}" alt="" class="brand-logo" />
+{% endif %}
+    <h1>{{ brand.displayName|e('html') }}</h1>
+    <p>Votre application {{ frontend_def.label|e('html') }} + Symfony {{ framework_version }} est prête.</p>
+    <p>API : <strong>{% verbatim %}{{ health }}{% endverbatim %}</strong></p>
+  </main>
+</template>

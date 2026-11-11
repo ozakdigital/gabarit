@@ -1,0 +1,19 @@
+import { Component, OnInit, signal } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.html',
+})
+export class App implements OnInit {
+  protected readonly health = signal('…');
+
+  async ngOnInit(): Promise<void> {
+    try {
+      const response = await fetch('/api/health');
+      const data: { status: string } = await response.json();
+      this.health.set(data.status);
+    } catch {
+      this.health.set('injoignable');
+    }
+  }
+}

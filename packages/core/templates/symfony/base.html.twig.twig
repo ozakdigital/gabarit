@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{% verbatim %}{% block title %}{% endverbatim %}{{ brand.displayName|e('html') }}{% verbatim %}{% endblock %}{% endverbatim %}</title>
+{% if logo_file %}
+        <link rel="icon" href="/{{ logo_file }}">
+{% endif %}
+        <link rel="stylesheet" href="/brand.css">
+{% verbatim %}
+        {% block stylesheets %}{% endblock %}
+        {% block javascripts %}{% endblock %}
+{% endverbatim %}
+    </head>
+    <body>
+{% verbatim %}
+        {% block body %}{% endblock %}
+{% endverbatim %}
+    </body>
+</html>

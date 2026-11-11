@@ -1,0 +1,5 @@
+  mailpit:
+    image: {{ services.mailpit.image|json }}
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
+    restart: unless-stopped

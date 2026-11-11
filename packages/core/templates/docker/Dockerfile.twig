@@ -1,0 +1,21 @@
+# {{ brand.displayName }} — image PHP {{ php_version }} (FPM). Générée par Gabarit.
+FROM {{ php_image }}
+{% set pg = 'pdo_pgsql' in php_extensions or 'pgsql' in php_extensions %}
+{% set pecl = php_extensions|filter(e => e == 'redis') %}
+{% set core = php_extensions|filter(e => e != 'redis') %}
+
+RUN apk add --no-cache icu-libs libzip fcgi{% if pg %} libpq{% endif %} \
+    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev{% if pg %} postgresql-dev{% endif %} \
+    && docker-php-ext-install -j"$(nproc)" intl zip opcache{% for ext in core %} {{ ext }}{% endfor %} \
+{% if pecl|length %}
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+{% endif %}
+    && apk del .build-deps
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY docker/php/app.ini $PHP_INI_DIR/conf.d/zz-app.ini
+COPY docker/php/fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
+
+WORKDIR /var/www/app

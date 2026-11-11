@@ -1,0 +1,102 @@
+# {{ brand.displayName }} — environnement Docker ({{ framework_def.label }}). Généré par Gabarit.
+# Les secrets viennent de {{ secrets_file }} : lancez les commandes via `make` (voir Makefile).
+name: {{ name }}
+
+services:
+  app:
+    build: .
+    volumes:
+      - .:/var/www/app
+{% if container_env_file %}
+    env_file: {{ container_env_file|json }}
+{% endif %}
+{% if db_server %}
+    depends_on:
+      database:
+        condition: service_healthy
+{% endif %}
+    restart: unless-stopped
+
+  nginx:
+    image: {{ docker.nginx|json }}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - ./public:/var/www/app/public:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+{% if db_server %}
+
+  database:
+    image: {{ db.image|json }}
+{% if database == 'postgresql' %}
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans {{ secrets_file }}}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - database-data:/var/lib/postgresql/data
+{% elseif database == 'mysql' %}
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans {{ secrets_file }}}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD manquant dans {{ secrets_file }}}
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - database-data:/var/lib/mysql
+{% elseif database == 'mariadb' %}
+    environment:
+      MARIADB_DATABASE: app
+      MARIADB_USER: app
+      MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans {{ secrets_file }}}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD manquant dans {{ secrets_file }}}
+    healthcheck:
+      # Script fourni par l'image officielle MariaDB.
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - database-data:/var/lib/mysql
+{% endif %}
+    restart: unless-stopped
+{% endif %}
+{% if is_spa %}
+
+  # Serveur de dev du front ({{ frontend_def.label }}), avec proxy /api vers nginx.
+  node:
+    image: {{ docker.node|json }}
+    working_dir: /app
+    command: {{ spa.devCommand|json }}
+    ports:
+      - "${FRONT_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      # node_modules dans un volume Docker : installation bien plus rapide sous Windows et macOS.
+      - frontend-node-modules:/app/node_modules
+    depends_on:
+      - nginx
+{% endif %}
+  # gabarit:services
+{% if db_server or is_spa %}
+
+volumes:
+{% if db_server %}
+  database-data:
+{% endif %}
+{% if is_spa %}
+  frontend-node-modules:
+{% endif %}
+{% endif %}

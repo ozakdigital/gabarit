@@ -1,0 +1,8 @@
+/{{ secrets_file }}
+/.env.ci
+/frontend/node_modules/
+/frontend/dist/
+{% if database == 'sqlite' %}
+*.sqlite
+*.db
+{% endif %}

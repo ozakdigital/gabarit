@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory="var/phpunit"
+         failOnWarning="true"
+         failOnRisky="true"
+         failOnDeprecation="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true"
+         displayDetailsOnTestsThatTriggerWarnings="true">
+    <testsuites>
+        <testsuite name="core">
+            <directory>packages/core/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="generation">
+            <directory>packages/core/tests/Generation</directory>
+        </testsuite>
+        <testsuite name="cli">
+            <directory>apps/cli/tests</directory>
+        </testsuite>
+    </testsuites>
+
+    <groups>
+        <exclude>
+            <!-- Installeurs réels (réseau, plusieurs minutes) : `make test-nightly`. -->
+            <group>real-installers</group>
+        </exclude>
+    </groups>
+
+    <source>
+        <include>
+            <directory>packages/core/src</directory>
+            <directory>apps/cli/src</directory>
+        </include>
+    </source>
+</phpunit>

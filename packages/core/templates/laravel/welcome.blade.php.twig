@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{% verbatim %}{{ config('app.name') }}{% endverbatim %}</title>
+{% if logo_file %}
+        <link rel="icon" href="/{{ logo_file }}">
+{% endif %}
+        <link rel="stylesheet" href="/brand.css">
+    </head>
+    <body>
+        <main class="brand-hero">
+{% if logo_file %}
+            <img src="/{{ logo_file }}" alt="" class="brand-logo">
+{% endif %}
+            <h1>{% verbatim %}{{ config('app.name') }}{% endverbatim %}</h1>
+            <p>Votre application Laravel {% verbatim %}{{ app()->version() }}{% endverbatim %} est prête.</p>
+            <p><a class="brand-button" href="/api/health">Test de santé</a></p>
+        </main>
+    </body>
+</html>

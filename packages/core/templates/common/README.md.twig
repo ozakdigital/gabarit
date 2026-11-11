@@ -1,0 +1,48 @@
+# {{ brand.displayName }}
+
+Projet {{ framework_def.label }} {{ framework_version }} généré par Gabarit.
+
+| Élément | Choix |
+|---|---|
+| PHP | {{ php_version }} |
+| Base de données | {{ db.label }} |
+| Front | {{ frontend_def.label }} |
+| Services | {{ services|length ? (services|map(s => s.label)|join(', ')) : 'aucun' }} |
+| Namespace PHP | `{{ brand.phpNamespace }}` |
+
+## Démarrer
+
+Prérequis : Docker et `make`.
+
+```
+make up
+```
+
+- Application : http://localhost:8080
+- Test de santé : http://localhost:8080/api/health
+{% if is_spa %}
+- Front {{ frontend_def.label }} : http://localhost:5173 (code dans `frontend/`)
+{% endif %}
+{% if services.mailpit is defined %}
+- Mailpit : http://localhost:8025
+{% endif %}
+
+`make help` liste toutes les commandes.
+
+## Secrets
+
+Les mots de passe ont été générés aléatoirement dans `{{ secrets_file }}`. Ce fichier n'est
+jamais versionné : sur un nouveau poste, recréez-le (docker compose y lit notamment
+{% if db_server %}`DB_PASSWORD`{% if database in ['mysql', 'mariadb'] %} et `DB_ROOT_PASSWORD`{% endif %}{% else %}les variables de l'application{% endif %}).
+{% if not db_server %}
+
+## Base de données
+
+{{ db.label }} : la base est un fichier dans le projet, aucun conteneur n'est nécessaire.
+{% endif %}
+{% if services.redis is defined %}
+
+## Redis
+
+Redis est disponible dans le réseau Docker sur l'hôte `redis`, port 6379.
+{% endif %}

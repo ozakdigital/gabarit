@@ -1,0 +1,3 @@
+* text=auto eol=lf
+*.png binary
+apps/cli/bin/gabarit text eol=lf

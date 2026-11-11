@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\App;
+
+/**
+ * Test de santé (généré par Gabarit) : GET /api/health vérifie aussi la connexion à la base.
+ * Paramètres lus dans l'environnement du conteneur (.env injecté par docker compose).
+ */
+return static function (App $app): void {
+    // Pas de closure « static » : Slim lie les routes à son conteneur.
+    $app->get('/api/health', function (Request $request, Response $response): Response {
+        $env = static fn (string $key, string $default = ''): string => (string) (getenv($key) ?: $default);
+
+        try {
+            $driver = $env('DB_DRIVER', 'sqlite');
+            $pdo = 'sqlite' === $driver
+                ? new PDO('sqlite:' . $env('DB_PATH'))
+                : new PDO(
+                    sprintf('%s:host=%s;port=%s;dbname=%s', $driver, $env('DB_HOST'), $env('DB_PORT'), $env('DB_NAME')),
+                    $env('DB_USER'),
+                    $env('DB_PASSWORD'),
+                    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+                );
+            $pdo->query('SELECT 1');
+            $database = 'ok';
+        } catch (Throwable) {
+            $database = 'error';
+        }
+
+        $response->getBody()->write((string) json_encode(
+            ['status' => 'ok' === $database ? 'ok' : 'degraded', 'app' => {{ brand.displayName|json }}, 'database' => $database],
+        ));
+
+        return $response->withHeader('Content-Type', 'application/json')->withStatus('ok' === $database ? 200 : 503);
+    });
+};

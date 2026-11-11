@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use CodeIgniter\HTTP\ResponseInterface;
+
+/**
+ * Test de santé : utilisé par la CI et par la supervision.
+ */
+final class Health extends BaseController
+{
+    public function index(): ResponseInterface
+    {
+        try {
+            \Config\Database::connect()->query('SELECT 1');
+            $database = 'ok';
+        } catch (\Throwable) {
+            $database = 'error';
+        }
+
+        return $this->response
+            ->setStatusCode('ok' === $database ? 200 : 503)
+            ->setJSON(['status' => 'ok' === $database ? 'ok' : 'degraded', 'app' => {{ brand.displayName|json }}, 'database' => $database]);
+    }
+}

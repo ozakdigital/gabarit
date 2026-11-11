@@ -1,0 +1,65 @@
+# {{ brand.displayName }} — intégration continue. Généré par Gabarit.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  docker:
+    name: Configuration Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fichier d'environnement de CI
+        run: printf 'DB_PASSWORD=ci\nDB_ROOT_PASSWORD=ci\n' > .env.ci
+{% if container_env_file %}
+      - name: Environnement du conteneur
+        run: touch {{ container_env_file }}
+{% endif %}
+      - name: docker compose config
+        run: docker compose --env-file .env.ci config --quiet
+
+  php:
+    name: {{ (framework_def.label ~ ' sur PHP ' ~ php_version)|json }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: {{ php_version|json }}
+          extensions: intl, zip{% for ext in php_extensions %}, {{ ext }}{% endfor %}
+
+      - run: composer validate --no-check-publish
+      - run: composer install --no-interaction --no-progress
+{% if framework == 'symfony' %}
+      - run: php bin/console lint:container
+      - run: php bin/console lint:yaml config
+{% if frontend == 'twig' %}
+      - run: php bin/console lint:twig templates
+{% endif %}
+{% elseif framework == 'laravel' %}
+      - run: cp .env.example .env && php artisan key:generate
+      - run: {{ check_command|json }}
+{% elseif framework == 'codeigniter' %}
+      - run: cp env .env
+      - run: {{ check_command|json }}
+{% else %}
+      - run: {{ check_command|json }}
+{% endif %}
+{% if is_spa %}
+
+  front:
+    name: {{ ('Front ' ~ frontend_def.label)|json }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run build
+{% endif %}

@@ -1,0 +1,3 @@
+  redis:
+    image: {{ services.redis.image|json }}
+    restart: unless-stopped

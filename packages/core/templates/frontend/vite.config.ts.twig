@@ -1,0 +1,18 @@
+{{ vite_plugin.import }}
+import { defineConfig } from 'vite'
+
+// https://vite.dev/config/ — généré par Gabarit
+export default defineConfig({
+  plugins: [{{ vite_plugin.call }}],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    // L'API Symfony est servie par nginx dans le réseau Docker.
+    proxy: {
+      '/api': {
+        target: process.env.API_URL ?? 'http://nginx',
+        changeOrigin: true,
+      },
+    },
+  },
+})

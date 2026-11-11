@@ -1,0 +1,15 @@
+includes:
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+
+parameters:
+    level: 8
+    phpVersion: 80300
+    tmpDir: var/phpstan
+    paths:
+        - packages/core/src
+        - packages/core/tests
+        - apps/cli/src
+        - apps/cli/tests
+        - apps/cli/bin/gabarit
+    excludePaths:
+        - packages/core/tests/Fixtures/*

@@ -1,0 +1,41 @@
+/* Thème de marque — {{ brand.displayName }}. Généré par Gabarit. */
+:root {
+  --brand-primary: {{ brand.primaryColor }};
+  --brand-secondary: {{ brand.secondaryColor }};
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--brand-secondary);
+}
+
+.brand-hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.brand-hero h1 {
+  color: var(--brand-primary);
+  margin: 0;
+}
+
+.brand-logo {
+  max-width: 160px;
+  max-height: 160px;
+}
+
+.brand-button {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.5rem;
+  background: var(--brand-primary);
+  color: #fff;
+  text-decoration: none;
+}

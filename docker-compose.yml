@@ -1,0 +1,15 @@
+# Environnement de dev de Gabarit lui-même (pas celui des projets générés).
+# Phase 1 : un conteneur d'outillage PHP. Postgres, Redis et le worker arrivent en phase 2.
+services:
+  php:
+    build: docker/dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - composer-cache:/tmp/composer
+      # Le client Docker du conteneur parle au démon de l'hôte (tests de génération).
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["sleep", "infinity"]
+
+volumes:
+  composer-cache:

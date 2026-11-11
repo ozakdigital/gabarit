@@ -1,0 +1,28 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Gabarit\Cli\Application;
+use Gabarit\Cli\Console\ExitCode;
+use Gabarit\Core\Exception\MatrixException;
+use Gabarit\Core\Matrix\MatrixLoader;
+use Gabarit\Core\Process\SymfonyProcessRunner;
+
+require dirname(__DIR__, 3).'/vendor/autoload.php';
+
+try {
+    $matrix = (new MatrixLoader())->load(getenv('GABARIT_MATRIX') ?: null);
+} catch (MatrixException $e) {
+    fwrite(\STDERR, 'Matrice invalide : '.$e->getMessage().\PHP_EOL);
+    exit(ExitCode::RUNTIME_ERROR);
+}
+
+$verbose = (bool) array_intersect(['-v', '-vv', '-vvv', '--verbose'], $argv);
+$process = new SymfonyProcessRunner(
+    output: $verbose ? static function (string $type, string $buffer): void {
+        fwrite(\STDERR, $buffer);
+    } : null,
+);
+
+exit((new Application($matrix, $process))->run());

@@ -1,0 +1,41 @@
+# {{ brand.displayName }} — commandes de développement. Généré par Gabarit.
+# Les secrets sont lus dans {{ secrets_file }} (non versionné).
+COMPOSE = docker compose --env-file {{ secrets_file }}
+
+.DEFAULT_GOAL := help
+.PHONY: help up down restart logs sh install test
+
+help: ## Affiche cette aide
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-10s %s\n", $$1, $$2}'
+
+up: ## Démarre l'environnement (http://localhost:8080)
+	$(COMPOSE) up -d --build
+	$(COMPOSE) exec app composer install --no-interaction
+{% for command in post_up_commands %}
+	$(COMPOSE) exec app {{ command }}
+{% endfor %}
+	@echo "→ Application : http://localhost:$${HTTP_PORT:-8080}"
+{% if is_spa %}
+	@echo "→ Front       : http://localhost:$${FRONT_PORT:-5173}"
+{% endif %}
+{% if services.mailpit is defined %}
+	@echo "→ Mailpit     : http://localhost:$${MAILPIT_PORT:-8025}"
+{% endif %}
+
+down: ## Arrête l'environnement
+	$(COMPOSE) down
+
+restart: down up ## Redémarre l'environnement
+
+logs: ## Affiche les logs
+	$(COMPOSE) logs -f
+
+sh: ## Ouvre un shell dans le conteneur PHP
+	$(COMPOSE) exec app sh
+
+install: ## Installe les dépendances PHP
+	$(COMPOSE) exec app composer install --no-interaction
+
+test: ## Vérifie que l'application répond
+	$(COMPOSE) exec app {{ check_command }}
+	curl -fsS http://localhost:$${HTTP_PORT:-8080}/api/health

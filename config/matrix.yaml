@@ -1,0 +1,149 @@
+# Matrice de compatibilité de Gabarit — source de vérité unique.
+#
+# Règles (voir CLAUDE.md §7) :
+#   - ne jamais inventer une version : vérifier la doc officielle avant d'ajouter une entrée ;
+#   - toute entrée ajoutée ici est couverte automatiquement par les tests de génération
+#     (packages/core/tests/Generation), qui parcourent toutes les combinaisons.
+#
+# Sources vérifiées le 2026-11-11 :
+#   - Symfony 7.4 LTS : https://symfony.com/releases/7.4 (maintenance jusqu'en 11/2028),
+#     symfony/framework-bundle 7.4 requiert "php >=8.2" (Packagist).
+#   - create-vite 9.3.4 : dernière version publiée sur npm (2026-11-05) ; modèles vue-ts,
+#     react-ts, svelte-ts, solid-ts, preact-ts listés par `create-vite --help`.
+#   - @angular/cli 22.2.6 : dernière version sur npm, requiert Node ^22.22.3 || ^24.15.0
+#     (node:22-alpine fournit 22.23.4).
+#   - Laravel 13 : https://laravel.com/docs/13.x/releases (PHP 8.3 – 8.5, sécurité jusqu'au
+#     17/03/2028) ; laravel/laravel v13.11.0 requiert "php ^8.3". Laravel 12 n'est plus qu'en
+#     correctifs de sécurité : non proposé pour un nouveau projet.
+#   - CodeIgniter 4.7 : codeigniter4/appstarter v4.7.6 requiert "php ^8.2" (Packagist).
+#   - Slim 4 : slim/slim 4.15.3 accepte PHP 7.4 – 8.5, slim/slim-skeleton 4.5.0 (Packagist).
+#   - Images Docker : tags vérifiés sur Docker Hub (dont mariadb:11.8, LTS).
+#
+# MinIO est volontairement absent : l'image minio/minio n'est plus distribuée sur
+# Docker Hub (accès refusé) et aucune image de remplacement n'a pu être vérifiée.
+#
+# custom_namespace : le namespace PHP « App » peut-il être remplacé par celui de la marque ?
+# (CodeIgniter lie « App » à sa constante APP_NAMESPACE et à sa config : non pris en charge.)
+
+frameworks:
+  symfony:
+    label: "Symfony"
+    custom_namespace: true
+    versions:
+      "7.4":
+        php: ["8.2", "8.3", "8.4"]
+        package: "symfony/skeleton"
+        constraint: "7.4.*"
+    databases: [postgresql, mysql, mariadb, sqlite]
+    frontends: [twig, none, vue, react, svelte, angular, solid, preact]
+  laravel:
+    label: "Laravel"
+    custom_namespace: true
+    versions:
+      "13":
+        php: ["8.3", "8.4"]
+        package: "laravel/laravel"
+        constraint: "13.*"
+    databases: [postgresql, mysql, mariadb, sqlite]
+    frontends: [blade, none, vue, react, svelte, angular, solid, preact]
+  codeigniter:
+    label: "CodeIgniter"
+    custom_namespace: false
+    versions:
+      "4.7":
+        php: ["8.2", "8.3", "8.4"]
+        package: "codeigniter4/appstarter"
+        constraint: "4.7.*"
+    databases: [postgresql, mysql, mariadb, sqlite]
+    frontends: [none, vue, react, svelte, angular, solid, preact]
+  slim:
+    label: "Slim"
+    custom_namespace: true
+    versions:
+      "4":
+        php: ["8.2", "8.3", "8.4"]
+        package: "slim/slim-skeleton"
+        constraint: "4.*"
+    databases: [postgresql, mysql, mariadb, sqlite]
+    frontends: [none, vue, react, svelte, angular, solid, preact]
+
+# server: false = base embarquée dans un fichier (pas de conteneur Docker).
+databases:
+  postgresql:
+    label: "PostgreSQL"
+    server: true
+    image: "postgres:17-alpine"
+    port: 5432
+    server_version: "17"
+  mysql:
+    label: "MySQL"
+    server: true
+    image: "mysql:8.4"
+    port: 3306
+    server_version: "8.4"
+  mariadb:
+    label: "MariaDB"
+    server: true
+    image: "mariadb:11.8"
+    port: 3306
+    server_version: "11.8.0-MariaDB"
+  sqlite:
+    label: "SQLite (fichier local)"
+    server: false
+
+# kind : server (rendu par le framework PHP), vite (create-vite), angular (Angular CLI).
+# Les applications SPA sont générées dans frontend/ et servies en dev par le service Docker « node ».
+frontends:
+  twig:
+    label: "Twig (rendu serveur)"
+    kind: server
+  blade:
+    label: "Blade (rendu serveur)"
+    kind: server
+  none:
+    label: "Aucun (API seule)"
+    kind: server
+  vue:
+    label: "Vue 3 + Vite + TypeScript"
+    kind: vite
+    installer: "create-vite@9.3.4"
+    template: "vue-ts"
+  react:
+    label: "React 19 + Vite + TypeScript"
+    kind: vite
+    installer: "create-vite@9.3.4"
+    template: "react-ts"
+  svelte:
+    label: "Svelte 5 + Vite + TypeScript"
+    kind: vite
+    installer: "create-vite@9.3.4"
+    template: "svelte-ts"
+  solid:
+    label: "SolidJS + Vite + TypeScript"
+    kind: vite
+    installer: "create-vite@9.3.4"
+    template: "solid-ts"
+  preact:
+    label: "Preact + Vite + TypeScript"
+    kind: vite
+    installer: "create-vite@9.3.4"
+    template: "preact-ts"
+  angular:
+    label: "Angular 22 (Angular CLI)"
+    kind: angular
+    installer: "@angular/cli@22.2.6"
+
+services:
+  redis:
+    label: "Redis"
+    image: "redis:7-alpine"
+    port: 6379
+  mailpit:
+    label: "Mailpit (capture des e-mails)"
+    image: "axllent/mailpit:latest"
+    port: 8025
+
+docker:
+  php_image: "php:{php}-fpm-alpine"
+  nginx_image: "nginx:1.28-alpine"
+  node_image: "node:22-alpine"

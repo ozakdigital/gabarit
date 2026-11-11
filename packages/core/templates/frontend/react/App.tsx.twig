@@ -1,0 +1,27 @@
+import { useEffect, useState } from 'react'
+
+function App() {
+  const [health, setHealth] = useState('…')
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then((response) => response.json() as Promise<{ status: string }>)
+      .then((data) => setHealth(data.status))
+      .catch(() => setHealth('injoignable'))
+  }, [])
+
+  return (
+    <main className="brand-hero">
+{% if logo_file %}
+      <img src="/{{ logo_file }}" alt="" className="brand-logo" />
+{% endif %}
+      <h1>{{ brand.displayName|e('html') }}</h1>
+      <p>Votre application {{ frontend_def.label|e('html') }} + Symfony {{ framework_version }} est prête.</p>
+      <p>
+        API : <strong>{health}</strong>
+      </p>
+    </main>
+  )
+}
+
+export default App
