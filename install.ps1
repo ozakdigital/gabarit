@@ -58,6 +58,22 @@ if (-not $env:GABARIT_NO_PATH -and (($userPath -split ';') -notcontains $binDir)
 }
 if (($env:Path -split ';') -notcontains $binDir) { $env:Path = "$env:Path;$binDir" }
 
-& (Join-Path $binDir 'gabarit.cmd') --version
+$version = (& (Join-Path $binDir 'gabarit.cmd') --version | Select-Object -First 1)
+if (-not $version) { $version = 'Gabarit' }
+
+# Logo : le G de l'icone Gabarit. Fichier en ASCII : # _ ^ deviennent des blocs a l'affichage.
+$logo = @(
+    @(' _######_', ''),
+    @('##^    ^^', ''),
+    @('##   ____', "    $version"),
+    @('##_    ##', '    Generateur de projets PHP en marque blanche'),
+    @(' ^######^', '')
+)
+Write-Host ''
+foreach ($line in $logo) {
+    $art = $line[0].Replace('#', [string][char]0x2588).Replace('_', [string][char]0x2584).Replace('^', [string][char]0x2580)
+    Write-Host ('  ' + $art) -ForegroundColor Magenta -NoNewline
+    Write-Host $line[1]
+}
 Write-Host ''
 Write-Host 'Gabarit est installe. Ouvrez un nouveau terminal puis essayez : gabarit new mon-app' -ForegroundColor Green

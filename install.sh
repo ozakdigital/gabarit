@@ -53,5 +53,14 @@ case ":$PATH:" in
         ;;
 esac
 
-"$BIN_DIR/gabarit" --version
-printf '\n\033[32m✔ Gabarit est installé.\033[0m Essayez : gabarit new mon-app\n'
+VERSION=$("$BIN_DIR/gabarit" --version 2>/dev/null | head -n 1)
+
+# Logo : le « G » de l'icône Gabarit, en blocs violets.
+P='\033[1;38;5;135m'; R='\033[0m'; B='\033[1m'
+printf '\n'
+printf "  ${P} ▄██████▄${R}\n"
+printf "  ${P}██▀    ▀▀${R}\n"
+printf "  ${P}██   ▄▄▄▄${R}    ${B}%s${R}\n" "${VERSION:-Gabarit}"
+printf "  ${P}██▄    ██${R}    Générateur de projets PHP en marque blanche\n"
+printf "  ${P} ▀██████▀${R}\n\n"
+printf '\033[32m✔ Gabarit est installé.\033[0m Essayez : gabarit new mon-app\n'
