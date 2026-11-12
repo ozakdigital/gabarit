@@ -250,6 +250,11 @@ make test-nightly  # toute la matrice + installeurs réels
 make lint      # PHPStan + PHP-CS-Fixer + validation de la matrice
 make test-ui   # tests de composants de l'interface (Vitest)
 make test-e2e  # parcours complet sur le site lancé par `make web` (Playwright)
+make web-dev   # site en mode développement (API + Vite, rechargement à chaud)
+make hooks     # vérifications avant chaque commit (.githooks/pre-commit)
 make matrix    # affiche la matrice
-make gen       # génère un projet d'exemple dans ./tmp/demo
+make gen       # génère un projet dans ./tmp/demo (FW=, DB=, FRONT=, PHP=, SERVICES=)
 ```
+
+Sans make (Windows) : `bin/dev <commande>` ou `bin\dev.cmd <commande>`. Le Dev Container
+(`.devcontainer/`) ouvre VS Code dans le conteneur `php`, où `make` fonctionne directement.

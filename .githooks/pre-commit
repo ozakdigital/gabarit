@@ -1,0 +1,45 @@
+#!/bin/sh
+# Vérifications rapides avant commit, limitées aux fichiers modifiés (activées par `make hooks`).
+#   PHP      : PHP-CS-Fixer + PHPStan niveau 8
+#   matrice  : config/matrix.yaml se charge
+#   interface: vérification des types (vue-tsc)
+# Contourner une fois : git commit --no-verify
+set -e
+
+export COMPOSE_BAKE=false MSYS_NO_PATHCONV=1
+
+# Outils PHP : directement si PHP et vendor/ sont là (Dev Container, CI), sinon dans le conteneur de dev.
+if [ -n "$GABARIT_DEV" ] || { command -v php >/dev/null 2>&1 && [ -x vendor/bin/phpstan ]; }; then
+    run() { "$@"; }
+else
+    run() { docker compose run --rm -T php "$@"; }
+fi
+
+staged() {
+    git diff --cached --name-only --diff-filter=ACMR -- "$@"
+}
+
+php_files=$(staged 'packages/*.php' 'apps/cli/*.php' 'apps/cli/bin/gabarit' | grep -v '/Fixtures/' || true)
+if [ -n "$php_files" ]; then
+    echo "→ PHP-CS-Fixer et PHPStan sur $(echo "$php_files" | wc -l | tr -d ' ') fichier(s)"
+    # shellcheck disable=SC2086
+    run vendor/bin/php-cs-fixer fix --dry-run --diff --path-mode=intersection $php_files
+    # shellcheck disable=SC2086
+    run vendor/bin/phpstan analyse --no-progress --memory-limit=1G $php_files
+fi
+
+if [ -n "$(staged 'config/matrix.yaml')" ]; then
+    echo "→ Validation de la matrice"
+    run php apps/cli/bin/gabarit matrix --json > /dev/null
+fi
+
+if [ -n "$(staged 'apps/web/ui/src/*' 'apps/web/ui/tests/*' 'apps/web/ui/*.ts')" ]; then
+    echo "→ Vérification des types de l'interface"
+    if [ -d apps/web/ui/node_modules/.bin ] && command -v npx >/dev/null 2>&1; then
+        (cd apps/web/ui && npx vue-tsc -b)
+    else
+        run sh -c 'cd apps/web/ui && npm install --no-audit --no-fund > /dev/null && npx vue-tsc -b'
+    fi
+fi
+
+exit 0

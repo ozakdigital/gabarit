@@ -340,15 +340,21 @@ that the application starts and responds), `make help`.
 
 ## 7. Developing Gabarit
 
-The project's architecture rules are in [CLAUDE.md](CLAUDE.md) (in French).
+The project's architecture rules are in [CLAUDE.md](CLAUDE.md) (in French), and the contribution
+guide in [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
 
-To work on Gabarit itself (not just use it), you also need `make` (on Windows:
-`choco install make`):
+To work on Gabarit itself you only need **Docker** and **git**. Pick one:
+
+- **Dev Container** (VS Code): open the folder, then "Reopen in Container"; everything is installed;
+- **make**: `make up`, then `make test`;
+- **without make** (Windows): `bin\dev up`, then `bin\dev test` (`bin/dev` in Git Bash). `bin/dev`
+  accepts every Makefile command.
 
 ```bash
 git clone https://github.com/ozakdigital/gabarit.git
 cd gabarit
 make up      # dev container (PHP 8.3, Composer, Node, Docker client) + dependencies
+make hooks   # checks before every commit (PHP-CS-Fixer, PHPStan, interface types)
 make test
 ```
 
@@ -356,16 +362,13 @@ To try your changes with the real command: `GABARIT_SOURCE=$(pwd) sh install.sh`
 or `$env:GABARIT_SOURCE = (Get-Location); .\install.ps1` (Windows), which install `gabarit` from
 your local copy. After a change, `gabarit self-update` rebuilds the image.
 
-> **Without make**: every target in the [Makefile](Makefile) is a plain Docker command, for example
-> `docker compose run --rm -T php composer install`. In Git Bash, prefix with `MSYS_NO_PATHCONV=1`,
-> and export `COMPOSE_BAKE=false` if the build fails with "additional privileges requested".
-
 | Command | Purpose |
 |---|---|
 | `make test` | Unit tests, CLI tests, and generation of a **sample** of the matrix. Fast, no network. |
 | `make test-nightly` | Generates the **whole** matrix (656 projects), then one project with the real installers. |
 | `make lint` | PHPStan level 8, PHP-CS-Fixer, matrix validation. |
 | `make cs-fix` | Fixes code style. |
+| `make gen FW=laravel DB=sqlite FRONT=vue` | Generates a real project in `tmp/demo` (also `PHP=`, `SERVICES=`). |
 | `make sh` | Shell in the dev container. |
 
 Run after every change: `make lint` and `make test`.
@@ -379,14 +382,16 @@ Run after every change: `make lint` and `make test`.
 | `apps/web/Dockerfile`, `compose.yaml` | `api` (PHP-FPM) and `web` (nginx + interface) images |
 
 ```bash
-make web        # builds and starts the site: http://localhost:8090
-make web-down   # stops it
+make web-dev    # development mode, reloaded on every save: http://localhost:5173
+make web        # builds and starts the production-like site: http://localhost:8090
+make web-down   # stops it (make web-dev-down for development mode)
 make test-ui    # interface component tests (Vitest)
-make test-e2e   # full journey on the running site (Playwright)
+make test-e2e   # full journey on the site started by make web (Playwright)
 ```
 
-When working on the interface: `cd apps/web/ui && npm install && npm run dev`
-(http://localhost:5173, `/api` calls are proxied to `API_URL`, `http://localhost:8000` by default).
+`make web-dev` runs the Symfony API (http://localhost:8000) and Vite; the interface's `/api` calls
+are proxied to the API. On Windows each API call takes a few seconds (folder mounted into Docker);
+the interface itself reloads instantly.
 
 **Hosting the site** (VPS): copy the repository, then
 
@@ -440,7 +445,7 @@ The generation tests then cover the new combinations automatically.
 
 | Symptom | Cause and fix |
 |---|---|
-| `make: command not found` (Windows) | `choco install make`, or run the Makefile's Docker commands directly. |
+| `make: command not found` (Windows) | Use `bin\dev <command>` (same commands as the Makefile), the Dev Container, or `choco install make`. |
 | Docker build: "additional privileges requested" | `export COMPOSE_BAKE=false` |
 | Odd paths (`C:/Program Files/Git/app`) in Git Bash | Prefix with `MSYS_NO_PATHCONV=1`. |
 | `toomanyrequests` during a build | Docker Hub's anonymous pull limit: `docker login`, or wait. |

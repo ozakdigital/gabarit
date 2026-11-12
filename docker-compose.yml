@@ -1,15 +1,54 @@
 # Environnement de dev de Gabarit lui-même (pas celui des projets générés).
-# Un conteneur d'outillage PHP (tests, lint, CLI en développement).
+#   php     : conteneur d'outillage (tests, lint, CLI en développement) ; aussi utilisé par le Dev Container.
+#   api-dev, ui-dev (profil web-dev) : le site en mode développement, rechargé à chaque sauvegarde.
 services:
   php:
     build: docker/dev
+    image: gabarit-php
     working_dir: /app
+    environment:
+      GABARIT_DEV: "1"
     volumes:
       - .:/app
       - composer-cache:/tmp/composer
+      # node_modules Linux, séparé de celui de la machine (binaires différents sous Windows et macOS).
+      - ui-node-modules:/app/apps/web/ui/node_modules
       # Le client Docker du conteneur parle au démon de l'hôte (tests de génération).
       - /var/run/docker.sock:/var/run/docker.sock
     command: ["sleep", "infinity"]
 
+  # API Symfony du site, servie par le serveur intégré de PHP (http://localhost:8000).
+  api-dev:
+    image: gabarit-php
+    profiles: [web-dev]
+    working_dir: /app
+    volumes:
+      - .:/app
+      # Cache Symfony hors du dossier monté : bien plus rapide sous Windows et macOS.
+      - api-var:/app/apps/web/api/var
+    command: ["php", "-S", "0.0.0.0:8000", "-t", "apps/web/api/public", "apps/web/api/public/index.php"]
+    ports:
+      - "${API_DEV_PORT:-8000}:8000"
+
+  # Interface Vue avec Vite : rechargement à chaud (http://localhost:5173), /api relayé vers api-dev.
+  ui-dev:
+    image: gabarit-php
+    profiles: [web-dev]
+    working_dir: /app/apps/web/ui
+    environment:
+      API_URL: http://api-dev:8000
+      # Les volumes montés depuis Windows ou macOS ne signalent pas toujours les modifications.
+      VITE_POLL: "1"
+    volumes:
+      - .:/app
+      - ui-node-modules:/app/apps/web/ui/node_modules
+    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0"]
+    ports:
+      - "${UI_DEV_PORT:-5173}:5173"
+    depends_on:
+      - api-dev
+
 volumes:
   composer-cache:
+  ui-node-modules:
+  api-var:

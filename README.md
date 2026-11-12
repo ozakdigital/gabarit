@@ -341,15 +341,21 @@ Autres commandes : `make down`, `make logs`, `make sh` (shell dans le conteneur 
 
 ## 7. Développer Gabarit
 
-Les règles d'architecture du projet sont dans [CLAUDE.md](CLAUDE.md).
+Les règles d'architecture du projet sont dans [CLAUDE.md](CLAUDE.md), et le guide de
+contribution dans [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Pour travailler sur Gabarit lui-même (pas seulement l'utiliser), il faut en plus `make`
-(sous Windows : `choco install make`) :
+Pour travailler sur Gabarit lui-même, seuls **Docker** et **git** sont nécessaires. Au choix :
+
+- **Dev Container** (VS Code) : ouvrez le dossier puis « Reopen in Container » ; tout est installé ;
+- **make** : `make up`, puis `make test` ;
+- **sans make** (Windows) : `bin\dev up`, puis `bin\dev test` (`bin/dev` sous Git Bash). `bin/dev`
+  accepte toutes les commandes du Makefile.
 
 ```bash
 git clone https://github.com/ozakdigital/gabarit.git
 cd gabarit
 make up      # conteneur de dev (PHP 8.3, Composer, Node, client Docker) + dépendances
+make hooks   # vérifications avant chaque commit (PHP-CS-Fixer, PHPStan, types de l'interface)
 make test
 ```
 
@@ -358,17 +364,13 @@ Pour essayer vos modifications avec la vraie commande : `GABARIT_SOURCE=$(pwd) s
 installent `gabarit` depuis votre copie locale. Après une modification, `gabarit self-update`
 reconstruit l'image.
 
-> **Sans make** : chaque cible du [Makefile](Makefile) est une simple commande Docker, par exemple
-> `docker compose run --rm -T php composer install`. Sous Git Bash, préfixez par
-> `MSYS_NO_PATHCONV=1`, et exportez `COMPOSE_BAKE=false` si le build échoue avec « additional
-> privileges requested ».
-
 | Commande | Rôle |
 |---|---|
 | `make test` | Tests unitaires, CLI, et génération d'un **échantillon** de la matrice. Rapide, sans réseau. |
 | `make test-nightly` | Génère **toute** la matrice (656 projets), puis un projet avec les installeurs réels. |
 | `make lint` | PHPStan niveau 8, PHP-CS-Fixer, validation de la matrice. |
 | `make cs-fix` | Corrige le style de code. |
+| `make gen FW=laravel DB=sqlite FRONT=vue` | Génère un vrai projet dans `tmp/demo` (aussi `PHP=`, `SERVICES=`). |
 | `make sh` | Shell dans le conteneur de dev. |
 
 À lancer après chaque changement : `make lint` et `make test`.
@@ -382,14 +384,16 @@ reconstruit l'image.
 | `apps/web/Dockerfile`, `compose.yaml` | images `api` (PHP-FPM) et `web` (nginx + interface) |
 
 ```bash
-make web        # construit et lance le site : http://localhost:8090
-make web-down   # l'arrête
+make web-dev    # mode développement, rechargé à chaque sauvegarde : http://localhost:5173
+make web        # construit et lance le site comme en production : http://localhost:8090
+make web-down   # l'arrête (make web-dev-down pour le mode développement)
 make test-ui    # tests de composants de l'interface (Vitest)
-make test-e2e   # parcours complet sur le site lancé (Playwright)
+make test-e2e   # parcours complet sur le site lancé par make web (Playwright)
 ```
 
-En développement de l'interface : `cd apps/web/ui && npm install && npm run dev`
-(http://localhost:5173, les appels `/api` sont relayés vers `API_URL`, par défaut `http://localhost:8000`).
+`make web-dev` lance l'API Symfony (http://localhost:8000) et Vite ; les appels `/api` de
+l'interface sont relayés vers l'API. Sous Windows, chaque appel à l'API prend quelques secondes
+(dossier monté dans Docker) ; l'interface, elle, se recharge instantanément.
 
 **Héberger le site** (VPS) : copiez le dépôt, puis
 
@@ -443,7 +447,7 @@ Les tests de génération couvrent alors automatiquement les nouvelles combinais
 
 | Symptôme | Cause et solution |
 |---|---|
-| `make: command not found` (Windows) | `choco install make`, ou lancez les commandes Docker du Makefile directement. |
+| `make: command not found` (Windows) | Utilisez `bin\dev <commande>` (mêmes commandes que le Makefile), le Dev Container, ou `choco install make`. |
 | Build Docker : « additional privileges requested » | `export COMPOSE_BAKE=false` |
 | Chemins bizarres (`C:/Program Files/Git/app`) sous Git Bash | Préfixez par `MSYS_NO_PATHCONV=1`. |
 | `toomanyrequests` pendant un build | Limite de téléchargements anonymes de Docker Hub : `docker login`, ou patientez. |

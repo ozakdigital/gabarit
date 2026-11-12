@@ -1,0 +1,51 @@
+#!/usr/bin/env sh
+# Commandes de développement de Gabarit sans make ni PHP sur la machine : Docker suffit.
+# Mêmes noms que le Makefile.   Usage : bin/dev <commande> [VAR=valeur…]   (bin/dev help)
+# Les commandes d'outillage tournent dans le conteneur `php` ; celles qui pilotent Docker, ici.
+set -e
+cd "$(dirname "$0")/.."
+export COMPOSE_BAKE=false MSYS_NO_PATHCONV=1
+
+# Chemin du dépôt vu par Docker (Git Bash : C:/… plutôt que /c/…).
+host_dir() { pwd -W 2>/dev/null || pwd; }
+in_container() { docker compose run --rm -T php make "$@"; }
+
+cmd=${1:-help}
+[ $# -gt 0 ] && shift
+
+case "$cmd" in
+    up)
+        docker compose up -d --build php
+        in_container install
+        ;;
+    down) docker compose --profile web-dev down ;;
+    sh) docker compose run --rm php sh ;;
+    web)
+        docker build -q -t gabarit-web-api --target api -f apps/web/Dockerfile . > /dev/null
+        docker build -q -t gabarit-web-web --target web -f apps/web/Dockerfile . > /dev/null
+        APP_SECRET=${APP_SECRET:-gabarit-dev-secret} docker compose -f apps/web/compose.yaml up -d
+        echo "→ Site : http://localhost:${WEB_PORT:-8090}"
+        ;;
+    web-down) APP_SECRET=x docker compose -f apps/web/compose.yaml down ;;
+    web-dev)
+        docker compose build php
+        docker compose --profile web-dev up -d api-dev ui-dev
+        echo "→ Interface : http://localhost:${UI_DEV_PORT:-5173}   (journaux : docker compose logs -f ui-dev)"
+        ;;
+    web-dev-down) docker compose --profile web-dev rm -sf api-dev ui-dev ;;
+    hooks)
+        git config core.hooksPath .githooks
+        echo "→ Vérifications avant commit activées (contourner une fois : git commit --no-verify)"
+        ;;
+    test-e2e)
+        docker run --rm --add-host=host.docker.internal:host-gateway -e "E2E_URL=http://host.docker.internal:${WEB_PORT:-8090}" \
+            -v "$(host_dir)/apps/web/ui:/ui" -v /ui/node_modules -w /ui mcr.microsoft.com/playwright:v1.65.0-noble \
+            sh -c "npm ci --no-audit --no-fund && npx playwright test"
+        ;;
+    help)
+        echo "Usage : bin/dev <commande> [VAR=valeur…]"
+        echo
+        in_container help
+        ;;
+    *) in_container "$cmd" "$@" ;;
+esac
