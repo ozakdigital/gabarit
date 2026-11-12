@@ -1,0 +1,29 @@
+name: Proposer une option
+description: Un framework, une version, une base de données, un front ou un service à ajouter.
+labels: [nouvelle option]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type d'option
+      options: [Framework PHP, Version d'un framework, Base de données, Front, Service annexe, Autre]
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Nom et version exacte
+      placeholder: "Slim 5.0, Svelte 6…"
+    validations:
+      required: true
+  - type: input
+    id: docs
+    attributes:
+      label: Documentation officielle
+      description: Le lien qui confirme la version et les compatibilités (PHP, bases…). Gabarit n'invente jamais une version.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Pourquoi cette option ?

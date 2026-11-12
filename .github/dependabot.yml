@@ -1,0 +1,27 @@
+# Mises à jour automatiques des dépendances de Gabarit lui-même.
+# Les versions proposées aux projets générés restent dans config/matrix.yaml (vérifiées à la main).
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      composer: { patterns: ["*"] }
+
+  - package-ecosystem: composer
+    directory: /apps/web/api
+    schedule: { interval: weekly }
+    groups:
+      api: { patterns: ["*"] }
+
+  - package-ecosystem: npm
+    directory: /apps/web/ui
+    schedule: { interval: weekly }
+    groups:
+      ui: { patterns: ["*"] }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      actions: { patterns: ["*"] }
