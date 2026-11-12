@@ -82,6 +82,11 @@ final class SymfonyProfile implements FrameworkProfile
         return 'var/cache';
     }
 
+    public function writablePaths(): array
+    {
+        return ['var'];
+    }
+
     public function secretsFile(): string
     {
         return '.env.local';

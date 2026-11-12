@@ -27,6 +27,7 @@ final class CommonFilesStep implements GeneratorStep
         $context->render('common/Makefile.twig', 'Makefile');
         $context->render('common/README.md.twig', 'README.md');
         $context->render('common/editorconfig.twig', '.editorconfig');
+        $context->render('common/gitattributes.twig', '.gitattributes');
         $context->render('ci/github-actions.yml.twig', '.github/workflows/ci.yml');
 
         $this->mergeGitignore($context);

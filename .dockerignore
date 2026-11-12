@@ -1,7 +1,9 @@
 .git
-vendor
-var
+**/vendor
+**/node_modules
+**/var
+**/dist
 tmp
-node_modules
 packages/core/tests
 apps/cli/tests
+apps/web/api/tests

@@ -50,6 +50,9 @@ final class TemplateRenderingTest extends TestCase
             if (str_starts_with($template, 'frontend/') && !\array_key_exists($template, SpaLayouts::for($spec->frontend)->renders ?? [])) {
                 continue; // composants d'un autre front
             }
+            if (str_starts_with($template, 'starter/')) {
+                continue; // contexte propre au starter : couvert par StarterTest
+            }
             $output = $renderer->render($template, $context);
             self::assertNotSame('', trim($output), $template);
             self::assertStringNotContainsString('@@TAB@@', $output, $template);

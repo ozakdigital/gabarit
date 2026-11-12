@@ -86,6 +86,12 @@ final class LaravelProfile implements FrameworkProfile
         return null;
     }
 
+    public function writablePaths(): array
+    {
+        // database/ : fichier SQLite et son journal.
+        return ['storage', 'bootstrap/cache', 'database'];
+    }
+
     public function secretsFile(): string
     {
         return '.env';

@@ -1,5 +1,5 @@
 # Environnement de dev de Gabarit lui-même (pas celui des projets générés).
-# Phase 1 : un conteneur d'outillage PHP. Postgres, Redis et le worker arrivent en phase 2.
+# Un conteneur d'outillage PHP (tests, lint, CLI en développement).
 services:
   php:
     build: docker/dev

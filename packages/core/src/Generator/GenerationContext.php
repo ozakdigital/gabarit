@@ -122,6 +122,7 @@ final class GenerationContext
             'php_extensions' => $extensions,
             'check_command' => $profile->checkCommand(),
             'post_up_commands' => $profile->postUpCommands(),
+            'writable_paths' => $profile->writablePaths(),
             'db_server' => $this->matrix->database($spec->database)->server ?? false,
             'php_version' => $spec->phpVersion,
             'database' => $spec->database->value,

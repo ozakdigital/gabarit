@@ -1,0 +1,50 @@
+# Publie l'image de la CLI (ghcr.io/ozakdigital/gabarit), utilisée par la commande `gabarit`
+# installée et par `bin/up` des starters téléchargés depuis le site.
+name: Image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publication sur GHCR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version de Gabarit
+        id: version
+        run: echo "version=$(grep -oP "VERSION = '\K[^']+" packages/core/src/Gabarit.php)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # amd64 (Linux, Windows) et arm64 (Mac Apple Silicon, serveurs ARM).
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/cli/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/ozakdigital/gabarit:${{ steps.version.outputs.version }}
+            ghcr.io/ozakdigital/gabarit:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=CLI Gabarit : générateur de squelettes PHP en marque blanche
+            org.opencontainers.image.licenses=MIT
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

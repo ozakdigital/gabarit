@@ -21,7 +21,7 @@ jobs:
       - run: make lint RUN=
 
   test:
-    name: Tests + génération de toutes les combinaisons
+    name: Tests (cœur, CLI, API) + échantillon de la matrice
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +30,22 @@ jobs:
           php-version: "8.3"
           extensions: intl, zip
       - run: composer install --no-interaction --no-progress
+      - run: composer --working-dir=apps/web/api install --no-interaction --no-progress
       - run: make test RUN=
+
+  ui:
+    name: Interface web (types + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
 
   nightly:
     name: Nightly (installeurs réels)

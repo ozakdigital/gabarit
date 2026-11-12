@@ -121,6 +121,7 @@ Les commandes disponibles :
 | Commande | Rôle |
 |---|---|
 | `gabarit new <nom>` | génère un projet (interactif ou avec options) |
+| `gabarit apply` | installe un starter téléchargé depuis le site (dossier contenant `gabarit.json`) |
 | `gabarit matrix` | affiche les combinaisons disponibles (`--json` pour une machine) |
 | `gabarit doctor` | vérifie les outils nécessaires |
 | `gabarit self-update` | met Gabarit à jour |
@@ -191,6 +192,30 @@ Ajoutez `-v` à `new` pour voir en direct la sortie de composer et npm.
 
 > **Scripts sous Windows (cmd, PowerShell)** : si l'entrée est redirigée (pas de terminal),
 > définissez `GABARIT_NO_TTY=1` avant d'appeler `gabarit`.
+
+### Depuis le site web (sans rien installer d'autre que Docker)
+
+Le site fonctionne comme [start.spring.io](https://start.spring.io) :
+
+1. choisissez framework, PHP, base, front, services et marque, puis cliquez sur **Générer** ;
+2. le navigateur télécharge un **starter** zip de quelques Ko (`gabarit.json`, `bin/up`, `bin/up.cmd`,
+   `README.md`, logo éventuel) ;
+3. décompressez-le, puis lancez :
+
+   | Système | Commande |
+   |---|---|
+   | Linux, macOS, Git Bash | `./bin/up` |
+   | Windows (cmd, PowerShell) | `bin\up.cmd` |
+
+Au premier lancement, `bin/up` télécharge l'image Gabarit (`ghcr.io/ozakdigital/gabarit`), qui
+exécute `gabarit apply` : installation du framework et du front avec leurs installeurs officiels,
+configuration, marque et **secrets générés sur votre machine**. Puis `bin/up` démarre les conteneurs.
+Les lancements suivants démarrent simplement le projet.
+
+Le serveur web ne lance aucun installeur et ne stocke rien : le zip est construit puis envoyé.
+
+`gabarit apply` est aussi utilisable directement : dans un dossier contenant un `gabarit.json`,
+`gabarit apply` le transforme en projet complet.
 
 ---
 
@@ -339,6 +364,33 @@ reconstruit l'image.
 | `make sh` | Shell dans le conteneur de dev. |
 
 À lancer après chaque changement : `make lint` et `make test`.
+
+### Le site web
+
+| Dossier | Rôle |
+|---|---|
+| `apps/web/api` | API Symfony : `GET /api/matrix`, `POST /api/starter` (zip envoyé directement) |
+| `apps/web/ui` | interface Vue 3 + Vite + TypeScript |
+| `apps/web/Dockerfile`, `compose.yaml` | images `api` (PHP-FPM) et `web` (nginx + interface) |
+
+```bash
+make web        # construit et lance le site : http://localhost:8090
+make web-down   # l'arrête
+```
+
+En développement de l'interface : `cd apps/web/ui && npm install && npm run dev`
+(http://localhost:5173, les appels `/api` sont relayés vers `API_URL`, par défaut `http://localhost:8000`).
+
+**Héberger le site** (VPS) : copiez le dépôt, puis
+
+```bash
+APP_SECRET=$(openssl rand -hex 16) WEB_PORT=80 docker compose -f apps/web/compose.yaml up -d --build
+```
+
+Le site ne nécessite ni base de données ni stockage. Placez-le derrière votre proxy HTTPS habituel.
+Les starters pointent vers l'image `ghcr.io/ozakdigital/gabarit:<version>`, publiée par la CI
+(workflow `Image`) à chaque push sur `main` : elle doit être **publique** sur GitHub (Packages →
+gabarit → Package settings → Change visibility) pour que `bin/up` puisse la télécharger.
 
 ### Comment les tests restent rapides
 

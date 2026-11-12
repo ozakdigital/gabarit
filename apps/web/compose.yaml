@@ -1,0 +1,27 @@
+# Site web de Gabarit (production et essai local).
+#   APP_SECRET=$(openssl rand -hex 16) docker compose -f apps/web/compose.yaml up -d --build
+#   → http://localhost:8090
+name: gabarit-web
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      target: api
+    environment:
+      APP_SECRET: ${APP_SECRET:?APP_SECRET manquant (chaîne aléatoire)}
+      # Image écrite dans les starters (vide = ghcr.io/ozakdigital/gabarit:<version du cœur>).
+      GABARIT_IMAGE: ${GABARIT_IMAGE:-}
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      target: web
+    ports:
+      - "${WEB_PORT:-8090}:80"
+    depends_on:
+      - api
+    restart: unless-stopped

@@ -1,0 +1,7 @@
+# Limite de génération de starters par adresse IP (CLAUDE.md §9).
+framework:
+    rate_limiter:
+        starter:
+            policy: sliding_window
+            limit: 30
+            interval: '10 minutes'

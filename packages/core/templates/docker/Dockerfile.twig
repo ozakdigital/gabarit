@@ -17,5 +17,10 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY docker/php/app.ini $PHP_INI_DIR/conf.d/zz-app.ini
 COPY docker/php/fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
+# Rend inscriptibles les dossiers du framework (code monté depuis la machine hôte).
+COPY docker/php/entrypoint.sh /usr/local/bin/app-entrypoint
+RUN sed -i 's/\r$//' /usr/local/bin/app-entrypoint && chmod +x /usr/local/bin/app-entrypoint
 
 WORKDIR /var/www/app
+ENTRYPOINT ["app-entrypoint"]
+CMD ["php-fpm"]

@@ -46,6 +46,14 @@ interface FrameworkProfile
     /** Dossiers de cache à vider après un changement de namespace. */
     public function cacheDir(): ?string;
 
+    /**
+     * Dossiers où le framework écrit à l'exécution (cache, logs, sessions, base SQLite).
+     * Rendus inscriptibles par PHP-FPM (www-data) au démarrage du conteneur.
+     *
+     * @return list<string>
+     */
+    public function writablePaths(): array;
+
     /** Fichier non versionné qui porte les secrets ; docker compose le lit (--env-file). */
     public function secretsFile(): string;
 

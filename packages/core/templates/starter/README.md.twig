@@ -1,0 +1,32 @@
+# {{ brand.displayName }}
+
+Projet {{ framework_def.label }} {{ framework_version }} préparé par [Gabarit](https://github.com/ozakdigital/gabarit).
+
+| Élément | Choix |
+|---|---|
+| PHP | {{ php_version }} |
+| Base de données | {{ db.label }} |
+| Front | {{ frontend_def.label }} |
+| Services | {{ services|length ? (services|map(s => s.label)|join(', ')) : 'aucun' }} |
+
+## Démarrer
+
+Seul **Docker** est nécessaire (Docker Desktop sous Windows et macOS, Docker Engine sous Linux).
+
+| Système | Commande |
+|---|---|
+| Linux, macOS, Git Bash | `./bin/up` |
+| Windows (cmd, PowerShell) | `bin\up.cmd` |
+
+Au **premier lancement**, `bin/up` :
+
+1. télécharge l'image Gabarit (`{{ image }}`) ;
+2. installe {{ framework_def.label }} {{ framework_version }}{% if is_spa %} et le front {{ frontend_def.label }}{% endif %} avec leurs installeurs officiels, dans ce dossier ;
+3. applique la configuration (Docker, base, marque) et génère les mots de passe **sur votre machine** ;
+4. démarre les conteneurs.
+
+Cela prend quelques minutes. Les lancements suivants démarrent simplement le projet.
+
+Ensuite : http://localhost:8080 (et http://localhost:8080/api/health pour le test de santé).
+
+Ce README est remplacé par celui du projet complet après le premier lancement.

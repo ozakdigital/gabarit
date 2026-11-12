@@ -1,0 +1,54 @@
+#!/usr/bin/env sh
+# {{ brand.displayName }} — installation et démarrage (Linux, macOS, Git Bash).
+# Généré par Gabarit {{ gabarit_version }}. Seul Docker est nécessaire.
+#
+# Premier lancement : l'image Gabarit installe {{ framework_def.label }} {{ framework_version }} et le reste
+# du projet dans ce dossier (secrets générés sur votre machine), puis démarre les conteneurs.
+# Lancements suivants : démarre simplement les conteneurs.
+set -eu
+cd "$(dirname -- "$0")/.."
+
+IMAGE="${GABARIT_IMAGE:-{{ image }}}"
+
+if ! command -v docker >/dev/null 2>&1; then
+    echo "Docker est introuvable : installez Docker Desktop (Windows, macOS) ou Docker Engine (Linux)." >&2
+    exit 1
+fi
+
+if [ ! -f composer.json ]; then
+    echo "→ Première installation : Docker télécharge {{ framework_def.label }} et prépare le projet (quelques minutes)…"
+    WORKDIR=$(pwd)
+    USER_FLAG=""
+    if pwd -W >/dev/null 2>&1; then
+        # Git Bash : Docker Desktop attend des chemins Windows (C:/…).
+        WORKDIR=$(pwd -W)
+        export MSYS_NO_PATHCONV=1
+    else
+        # Linux, macOS : les fichiers créés vous appartiennent.
+        USER_FLAG="--user $(id -u):$(id -g)"
+    fi
+    TTY_FLAG=""
+    [ -t 0 ] && [ -t 1 ] && TTY_FLAG="-t"
+    # shellcheck disable=SC2086
+    docker run --rm -i $TTY_FLAG $USER_FLAG -v "$WORKDIR:/work" -w /work "$IMAGE" apply
+fi
+
+COMPOSE="docker compose --env-file {{ secrets_file }}"
+echo "→ Démarrage des conteneurs…"
+$COMPOSE up -d --build
+$COMPOSE exec -T app composer install --no-interaction
+{% for command in post_up_commands %}
+$COMPOSE exec -T app {{ command }}
+{% endfor %}
+
+echo ""
+echo "✔ {{ brand.displayName }} est démarré."
+echo "  Application    : http://localhost:${HTTP_PORT:-8080}"
+echo "  Test de santé  : http://localhost:${HTTP_PORT:-8080}/api/health"
+{% if is_spa %}
+echo "  Front          : http://localhost:${FRONT_PORT:-5173}"
+{% endif %}
+{% if services.mailpit is defined %}
+echo "  Mailpit        : http://localhost:${MAILPIT_PORT:-8025}"
+{% endif %}
+echo "  Arrêter        : docker compose --env-file {{ secrets_file }} down   (ou make down)"

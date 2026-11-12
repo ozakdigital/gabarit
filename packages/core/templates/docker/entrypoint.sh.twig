@@ -1,0 +1,13 @@
+#!/bin/sh
+# {{ brand.displayName }} — démarrage du conteneur PHP. Généré par Gabarit.
+# Le code est monté depuis votre machine : les dossiers où {{ framework_def.label }} écrit (cache, logs,
+# sessions{% if database == 'sqlite' %}, base SQLite{% endif %}) doivent rester inscriptibles par PHP-FPM (utilisateur www-data).
+set -e
+
+for dir in{% for path in writable_paths %} {{ path }}{% endfor %}; do
+    if [ -d "$dir" ]; then
+        chmod -R a+rwX "$dir" 2>/dev/null || true
+    fi
+done
+
+exec docker-php-entrypoint "$@"

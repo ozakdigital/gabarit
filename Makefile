@@ -4,7 +4,7 @@ export COMPOSE_BAKE := false
 RUN ?= docker compose run --rm -T php
 
 .DEFAULT_GOAL := help
-.PHONY: help up down install test test-nightly lint cs-fix matrix gen doctor sh
+.PHONY: help up down install test test-nightly lint lint-ui cs-fix matrix gen doctor sh web web-down
 
 help: ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-13s %s\n", $$1, $$2}'
@@ -12,15 +12,18 @@ help: ## Affiche cette aide
 up: ## Démarre l'environnement de dev (docker compose)
 	docker compose up -d --build
 	$(RUN) composer install --no-interaction
+	$(RUN) composer --working-dir=apps/web/api install --no-interaction
 
 down: ## Arrête l'environnement
 	docker compose down
 
 install: ## Installe les dépendances
 	$(RUN) composer install --no-interaction
+	$(RUN) composer --working-dir=apps/web/api install --no-interaction
 
-test: ## Tests unitaires, CLI et génération d'un échantillon couvrant de la matrice
+test: ## Tests unitaires, CLI, API web et génération d'un échantillon de la matrice
 	$(RUN) vendor/bin/phpunit
+	$(RUN) sh -c 'cd apps/web/api && APP_ENV=test vendor/bin/phpunit'
 
 test-nightly: ## Toute la matrice (656 générations) + installeurs réels (réseau, lent)
 	$(RUN) env GABARIT_FULL_MATRIX=1 vendor/bin/phpunit
@@ -30,6 +33,9 @@ lint: ## PHPStan niveau 8 + PHP-CS-Fixer (vérification) + validation de la matr
 	$(RUN) vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 	$(RUN) vendor/bin/php-cs-fixer fix --dry-run --diff
 	$(RUN) php apps/cli/bin/gabarit matrix --json > /dev/null
+
+lint-ui: ## Vérifie les types de l'interface web (vue-tsc), dans un conteneur Node
+	docker run --rm -v "$(CURDIR)/apps/web/ui:/ui" -v /ui/node_modules -w /ui node:22-alpine sh -c "npm ci --no-audit --no-fund && npx vue-tsc -b"
 
 cs-fix: ## Corrige le style de code
 	$(RUN) vendor/bin/php-cs-fixer fix
@@ -45,3 +51,10 @@ doctor: ## Vérifie les outils (dans le conteneur)
 
 sh: ## Shell dans le conteneur PHP
 	docker compose run --rm php sh
+
+web: ## Lance le site web en local (http://localhost:8090)
+	APP_SECRET=$${APP_SECRET:-gabarit-dev-secret} docker compose -f apps/web/compose.yaml up -d --build
+	@echo "→ Site : http://localhost:$${WEB_PORT:-8090}"
+
+web-down: ## Arrête le site web local
+	APP_SECRET=x docker compose -f apps/web/compose.yaml down

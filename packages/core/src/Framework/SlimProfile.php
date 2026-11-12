@@ -94,6 +94,11 @@ final class SlimProfile implements FrameworkProfile
         return null;
     }
 
+    public function writablePaths(): array
+    {
+        return ['var', 'logs'];
+    }
+
     public function secretsFile(): string
     {
         return '.env';

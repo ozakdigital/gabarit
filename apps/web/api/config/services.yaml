@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+parameters:
+    # Image Gabarit écrite dans les starters (vide = version du cœur : ghcr.io/ozakdigital/gabarit:<version>).
+    env(GABARIT_IMAGE): ''
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+
+    # Cœur de Gabarit (packages/core) : toute la logique vit là, l'API ne fait que l'appeler.
+    Gabarit\Core\Matrix\MatrixLoader: ~
+
+    # Matrice de compatibilité (config/matrix.yaml du dépôt, ou GABARIT_MATRIX).
+    Gabarit\Core\Matrix\Matrix:
+        factory: ['@Gabarit\Core\Matrix\MatrixLoader', 'load']
+        arguments: ['%env(default::GABARIT_MATRIX)%']
+
+    Gabarit\Core\Template\TemplateRenderer:
+        arguments: [null]
+
+    Gabarit\Core\Starter\StarterBuilder:
+        arguments:
+            $image: '%env(GABARIT_IMAGE)%'

@@ -104,7 +104,7 @@ final class GenerationTest extends TestCase
         $healthFile = self::HEALTH_FILES[$spec->framework->value];
 
         self::assertCount(10, $result->steps);
-        foreach (['Dockerfile', 'compose.yaml', 'docker/nginx/default.conf', 'docker/php/app.ini', 'docker/php/fpm.conf', '.dockerignore', 'Makefile', 'README.md', $profile->secretsFile(), '.gitignore', '.github/workflows/ci.yml', $healthFile] as $file) {
+        foreach (['Dockerfile', 'compose.yaml', 'docker/nginx/default.conf', 'docker/php/app.ini', 'docker/php/fpm.conf', 'docker/php/entrypoint.sh', '.gitattributes', '.dockerignore', 'Makefile', 'README.md', $profile->secretsFile(), '.gitignore', '.github/workflows/ci.yml', $healthFile] as $file) {
             self::assertFileExists($dir.'/'.$file);
         }
         self::assertStringContainsString('/'.$profile->secretsFile(), (string) file_get_contents($dir.'/.gitignore'), 'Le fichier de secrets doit être ignoré par git');
@@ -140,6 +140,11 @@ final class GenerationTest extends TestCase
         self::assertStringContainsString('FROM php:'.$spec->phpVersion.'-fpm-alpine', $dockerfile);
         foreach ($profile->phpExtensions($spec->database) as $extension) {
             self::assertStringContainsString(' '.$extension, $dockerfile);
+        }
+        self::assertStringContainsString('ENTRYPOINT ["app-entrypoint"]', $dockerfile);
+        $entrypoint = (string) file_get_contents($dir.'/docker/php/entrypoint.sh');
+        foreach ($profile->writablePaths() as $path) {
+            self::assertStringContainsString(' '.$path, $entrypoint, 'Dossier inscriptible manquant');
         }
 
         $health = (string) file_get_contents($dir.'/'.$healthFile);

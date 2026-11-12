@@ -6,20 +6,24 @@ Générateur de squelettes d'applications PHP en marque blanche. Deux interfaces
 
 Gabarit génère un projet PHP prêt à démarrer à partir de choix de l'utilisateur :
 
-- framework PHP + version (Symfony, Laravel, CodeIgniter, Slim…)
+- framework PHP + version (Symfony, Laravel, CodeIgniter, Slim)
 - version de PHP
 - base de données (PostgreSQL, MySQL, MariaDB, SQLite)
 - framework front (Twig/Blade, Vue 3, React, Svelte, Angular, SolidJS, Preact, aucun)
-- services annexes (Redis, MinIO, Mailpit)
-- Docker (Dockerfile, docker-compose, nginx)
+- services annexes (Redis, Mailpit)
+- Docker (Dockerfile, docker compose, nginx)
 - identité de marque (nom, logo, couleurs, namespace) — c'est le côté « marque blanche »
 
-Résultat : un dossier (CLI) ou une archive zip (web) qui démarre avec `make up`.
+Résultat :
+
+- **CLI** : `gabarit new` crée directement le projet complet dans le dossier courant ; il démarre avec `make up`.
+- **Web** (modèle Spring Initializr) : l'utilisateur choisit, télécharge un **starter** zip léger, le
+  décompresse et lance `bin/up`, qui installe et démarre tout grâce à Docker (voir §6).
 
 ## 2. Principes non négociables
 
 - **Un seul cœur.** Toute la logique de génération vit dans `packages/core`. La CLI et le web ne font qu'appeler le cœur. Aucune logique métier dans les contrôleurs ni dans les commandes.
-- **Composition en couches, pas de squelettes figés.** On n'embarque jamais le code d'un framework. On appelle son installeur officiel (`composer create-project`, `npm create vite`), puis on ajoute nos couches (Docker, env, CI, marque).
+- **Composition en couches, pas de squelettes figés.** On n'embarque jamais le code d'un framework. On appelle son installeur officiel (`composer create-project`, `create-vite`, `ng new`), puis on ajoute nos couches (Docker, env, CI, marque).
 - **La matrice de compatibilité est la source de vérité.** Tout choix est validé contre `config/matrix.yaml`. Une combinaison absente de la matrice est refusée, jamais « tentée ».
 - **Déterministe et testable.** Même entrée → même sortie (hors secrets générés). Chaque combinaison de la matrice doit pouvoir être générée en CI.
 - **Sécurité d'abord côté web.** Voir section 9.
@@ -32,13 +36,13 @@ Résultat : un dossier (CLI) ou une archive zip (web) qui démarre avec `make up
 | CLI | Symfony Console (+ Laravel Prompts pour les menus interactifs) |
 | Processus externes | Symfony Process |
 | Templates | Twig (moteur de rendu des fichiers générés) |
-| API web | Symfony (API Platform non requis, contrôleurs simples) |
+| Distribution de la CLI | Image Docker `ghcr.io/ozakdigital/gabarit` (publiée par la CI) + installeurs `install.sh` / `install.ps1` |
+| API web | Symfony (contrôleurs simples, sans base de données ni file d'attente) |
 | Front web | Vue.js 3 + Vite + TypeScript |
-| Base de données | PostgreSQL |
-| File d'attente | Symfony Messenger sur Redis |
-| Stockage des zips | MinIO (compatible S3) avec expiration |
 | Tests | PHPUnit + tests de génération de bout en bout |
 | Déploiement | Docker sur VPS Infomaniak |
+
+Le web ne stocke rien : le starter est construit en mémoire et envoyé directement au navigateur.
 
 ## 4. Structure du dépôt
 
@@ -47,26 +51,32 @@ gabarit/
 ├── CLAUDE.md
 ├── Makefile
 ├── docker-compose.yml            # environnement de dev de Gabarit lui-même
+├── install.sh, install.ps1       # installation de la CLI (Linux/macOS, Windows)
+├── bin/gabarit, bin/gabarit.cmd  # commande `gabarit` installée (lance l'image Docker)
 ├── config/
 │   └── matrix.yaml               # frameworks, versions, compatibilités
+├── docker/
+│   ├── dev/                      # image de l'environnement de dev
+│   └── cli/                      # image de distribution de la CLI
 ├── packages/
 │   └── core/                     # le cœur, sans dépendance à la CLI ni au web
 │       ├── src/
 │       │   ├── Matrix/           # chargement + validation de la matrice
-│       │   ├── Model/            # ProjectSpec, Brand, Choice (objets immuables)
-│       │   ├── Generator/        # un générateur par couche (voir §6)
-│       │   ├── Template/         # rendu Twig
-│       │   └── Archive/          # création du zip
-│       ├── templates/            # fichiers .twig (docker, env, ci, common…)
+│       │   ├── Model/            # ProjectSpec, Brand (objets immuables)
+│       │   ├── Generator/        # pipeline et étapes (voir §6)
+│       │   ├── Framework/        # un profil par framework PHP
+│       │   ├── Frontend/         # un profil par front SPA
+│       │   ├── Starter/          # starter zip (web) et son application (`gabarit apply`)
+│       │   └── Template/         # rendu Twig
+│       ├── templates/            # fichiers .twig (docker, common, ci, frontend, starter, <framework>…)
 │       └── tests/
-├── apps/
-│   ├── cli/                      # binaire `gabarit`
-│   │   ├── bin/gabarit
-│   │   └── src/Command/
-│   └── web/
-│       ├── api/                  # Symfony : endpoints + workers Messenger
-│       └── ui/                   # Vue 3 : formulaire de choix + suivi + téléchargement
-└── docs/
+└── apps/
+    ├── cli/                      # application console `gabarit`
+    │   ├── bin/gabarit
+    │   └── src/Command/
+    └── web/
+        ├── api/                  # Symfony : matrice + construction du starter
+        └── ui/                   # Vue 3 : formulaire de choix + téléchargement
 ```
 
 ## 5. Modèle de données central
@@ -85,6 +95,7 @@ brand            Brand    nom d'affichage, namespace PHP, logo (optionnel), coul
 ```
 
 `Brand` alimente les templates (titre, README, `composer.json` name/namespace, thème front).
+Les valeurs d'enum non déclarées dans la matrice (`inertia-vue`, `minio`) sont refusées.
 
 ## 6. Pipeline de génération
 
@@ -95,40 +106,53 @@ Ordre des étapes (chaque étape est une classe qui implémente `GeneratorStep`)
 1. `ValidateSpecStep` — contrôle contre la matrice
 2. `FrameworkInstallStep` — `composer create-project` à la version choisie
 3. `FrontendInstallStep` — installation du front choisi
-4. `DatabaseConfigStep` — `.env`, config Doctrine/Eloquent selon le framework
-5. `DockerStep` — Dockerfile, docker-compose, nginx, `.dockerignore`
-6. `ServicesStep` — ajoute Redis, MinIO, Mailpit au compose et à l'env
+4. `DatabaseConfigStep` — configuration de la base et route `/api/health`, selon le framework
+5. `DockerStep` — Dockerfile, docker compose, nginx, `.dockerignore`
+6. `ServicesStep` — ajoute Redis, Mailpit au compose et à l'env
 7. `BrandStep` — nom, namespace, logo, couleurs
 8. `CommonFilesStep` — Makefile, README, `.gitignore`, CI
-9. `SecretsStep` — mots de passe aléatoires dans `.env.local`
-10. `GitInitStep` — `git init` + premier commit (optionnel, désactivé côté web)
+9. `SecretsStep` — mots de passe aléatoires dans un fichier non versionné
+10. `GitInitStep` — `git init` + premier commit (optionnel)
 
 Une étape ne dépend que de `ProjectSpec` et de l'état du dossier cible. Elle doit être idempotente quand c'est possible.
+Les étapes sont génériques : ce qui diffère d'un framework à l'autre vit dans `Framework/<Nom>Profile`,
+ce qui diffère d'un front SPA à l'autre dans `Frontend/SpaLayouts`.
 
-### Mode « hors ligne » pour le web
+### Starter (web, modèle Spring Initializr)
 
-Côté web, les étapes qui lancent composer/npm sont lentes et risquées. Stratégie : le worker génère à partir d'instantanés pré-construits du framework (un squelette officiel par version, mis à jour par un job planifié), puis applique les étapes 3 à 9. La CLI, elle, appelle toujours les installeurs officiels.
+Le serveur web n'exécute jamais composer ni npm. `StarterBuilder` produit une archive de quelques Ko :
+
+- `gabarit.json` — la spec validée et la version de l'image Gabarit à utiliser ;
+- `bin/up` (Linux, macOS, Git Bash) et `bin/up.cmd` (Windows) ;
+- `README.md` et le logo éventuel.
+
+Au premier `bin/up`, l'image `ghcr.io/ozakdigital/gabarit:<version>` exécute `gabarit apply` :
+`StarterApplier` relit `gabarit.json`, lance le pipeline complet dans un dossier temporaire du conteneur,
+fusionne le résultat dans le dossier du starter, puis initialise git. `bin/up` démarre ensuite les
+conteneurs. Les secrets sont donc générés sur la machine de l'utilisateur, jamais sur le serveur.
 
 ## 7. Matrice de compatibilité
 
-Fichier `config/matrix.yaml`. Format :
+Fichier `config/matrix.yaml`. Format (extrait) :
 
 ```yaml
 frameworks:
-  symfony:
-    versions:
-      "7.4": { php: ["8.2", "8.3", "8.4"] }
-    databases: [postgresql, mysql, mariadb, sqlite]
-    frontends: [twig, vue, react, none]
   laravel:
+    label: "Laravel"
+    custom_namespace: true          # le namespace « App » peut être remplacé par celui de la marque
     versions:
-      "12": { php: ["8.2", "8.3", "8.4"] }
-    databases: [postgresql, mysql, sqlite]
-    frontends: [blade, vue, react, inertia-vue, none]
+      "13": { php: ["8.3", "8.4"], package: "laravel/laravel", constraint: "13.*" }
+    databases: [postgresql, mysql, mariadb, sqlite]
+    frontends: [blade, none, vue, react, svelte, angular, solid, preact]
+databases:
+  mariadb: { label: "MariaDB", server: true, image: "mariadb:11.8", port: 3306, server_version: "11.8.0-MariaDB" }
+  sqlite:  { label: "SQLite (fichier local)", server: false }
+frontends:
+  react: { label: "React 19 + Vite + TypeScript", kind: vite, installer: "create-vite@9.3.4", template: "react-ts" }
 services:
-  redis:   { image: "redis:7-alpine" }
-  minio:   { image: "minio/minio" }
-  mailpit: { image: "axllent/mailpit" }
+  redis: { label: "Redis", image: "redis:7-alpine", port: 6379 }
+docker:
+  php_image: "php:{php}-fpm-alpine"
 ```
 
 Règles :
@@ -144,11 +168,14 @@ Règles :
 ```
 gabarit new <nom>            # mode interactif (menus) ou avec options
 gabarit new mon-app --framework=symfony --fw-version=7.4 --php=8.3 \
-    --db=postgresql --frontend=vue --services=redis,minio --no-interaction
+    --db=postgresql --frontend=vue --services=redis --no-interaction
+gabarit apply                # transforme un starter décompressé (gabarit.json) en projet complet
 gabarit matrix               # affiche les combinaisons disponibles
 gabarit doctor               # vérifie docker, composer, node, git
+gabarit self-update          # (lanceur) met à jour Gabarit et reconstruit l'image
 ```
 
+- Installée par `install.sh` / `install.ps1` ; la commande `gabarit` exécute l'image Docker avec le dossier courant monté.
 - Mode interactif par défaut ; `--no-interaction` pour les scripts et la CI.
 - Codes de sortie : `0` succès, `1` erreur de validation, `2` erreur d'exécution.
 - Sortie lisible en français ; `--json` pour une sortie machine.
@@ -158,49 +185,47 @@ gabarit doctor               # vérifie docker, composer, node, git
 | Méthode | Route | Rôle |
 |---|---|---|
 | GET | `/api/matrix` | matrice pour construire le formulaire |
-| POST | `/api/projects` | valide un ProjectSpec, crée un job, renvoie `{id}` |
-| GET | `/api/projects/{id}` | statut : `queued`, `running`, `done`, `failed` + étape en cours |
-| GET | `/api/projects/{id}/download` | URL signée MinIO vers le zip |
+| POST | `/api/starter` | valide les choix et renvoie directement le starter zip |
 
 ### UI (Vue 3)
 
-Assistant en étapes : framework → version/PHP → base de données → front → services → marque → récapitulatif → progression → téléchargement. Les menus viennent de `/api/matrix`. Aucune règle de compatibilité n'est codée en dur dans l'UI.
+Une page de choix à la manière de start.spring.io : framework → version/PHP → base de données → front → services → marque, puis « Générer » télécharge le zip. Les menus viennent de `/api/matrix`. Aucune règle de compatibilité n'est codée en dur dans l'UI.
 
 ## 9. Sécurité (web)
 
 - **Liste blanche stricte** : toutes les valeurs sont validées contre la matrice. Le nom de projet est limité à `[a-z0-9-]`.
 - **Jamais de commande shell construite par concaténation** avec une entrée utilisateur. Utiliser Symfony Process avec un tableau d'arguments.
-- **Isolation** : les jobs de génération tournent dans un conteneur sans accès réseau sensible, avec limites CPU/mémoire/temps (timeout dur).
-- **Logo uploadé** : types MIME autorisés (PNG, SVG nettoyé), taille max, jamais exécuté.
-- **Zips temporaires** : expiration automatique (ex. 24 h), nettoyage par tâche planifiée.
-- **Rate limiting** sur `POST /api/projects`.
-- **Secrets** : aucun mot de passe en dur dans les templates ; générés aléatoirement à chaque projet.
+- **Aucune exécution côté serveur** : le web ne lance ni composer, ni npm, ni git ; il ne fait que valider et assembler le starter.
+- **Logo uploadé** : PNG ou SVG sans script, taille max, jamais exécuté.
+- **Aucun stockage** : le zip est construit puis envoyé ; rien n'est conservé sur le serveur.
+- **Rate limiting** sur `POST /api/starter`.
+- **Secrets** : aucun mot de passe en dur dans les templates ; générés aléatoirement sur la machine de l'utilisateur.
 
 ## 10. Conventions de code
 
 - PHP : PSR-12, `declare(strict_types=1)`, types stricts partout, classes `final` par défaut.
 - Pas d'état global ; injection de dépendances par constructeur.
 - Objets de valeur immuables (`readonly`).
-- Noms de classes et de code en anglais ; messages utilisateur et documentation en français.
+- Noms de classes et de code en anglais ; messages utilisateur et documentation en français (README également en anglais).
 - Un commit = un changement logique. Messages de commit à l'impératif, en français ou anglais, mais cohérents.
 - Analyse statique : PHPStan niveau 8 et PHP-CS-Fixer en CI.
 - Front : TypeScript strict, composition API de Vue, pas de dépendance inutile.
 
 ## 11. Tests
 
-- **Unitaires** : validation de la matrice, rendu de chaque template, `ProjectSpec`.
-- **Génération complète** : pour chaque combinaison de la matrice (ou un échantillon en PR, la totalité en nightly), générer le projet puis exécuter `docker compose config` (syntaxe valide) et, en nightly, `docker compose up -d` suivi d'un test de santé HTTP.
-- **API** : tests fonctionnels des endpoints et du worker.
+- **Unitaires** : validation de la matrice, rendu de chaque template, `ProjectSpec`, starter.
+- **Génération complète** : un échantillon couvrant de la matrice à chaque PR, la totalité en nightly ; chaque projet généré est validé par `docker compose config` et `composer validate`. Les installeurs sont simulés par des squelettes officiels figés (`packages/core/tests/Fixtures/skeletons`).
+- **Installeurs réels** (nightly) : génération avec composer/npm réels.
+- **API** : tests fonctionnels des endpoints.
 - **UI** : tests de composants + un scénario bout en bout du parcours complet.
 
 Commande standard : `make test`.
 
 ## 12. Plan de livraison
 
-- **Phase 1 — MVP cœur + CLI** : Symfony 7.4, PHP 8.3, PostgreSQL et MySQL, front Twig et Vue 3. Étapes 1 à 9 du pipeline. Commandes `new`, `matrix`, `doctor`. Tests de génération.
-- **Phase 2 — API + worker** : endpoints, Messenger/Redis, stockage MinIO, expiration. Instantanés pré-construits.
-- **Phase 3 — UI web** : assistant Vue 3, suivi de progression, téléchargement.
-- **Phase 4 — Extension** : Laravel, MariaDB/SQLite, React, Inertia ; gestion de la marque (logo, couleurs) ; mises à jour automatiques de la matrice.
+- **Fait** : cœur + CLI ; Symfony, Laravel, CodeIgniter, Slim ; PostgreSQL, MySQL, MariaDB, SQLite ; Twig, Blade et 6 fronts SPA ; marque ; installation de la CLI sur Windows, macOS, Linux.
+- **En cours — Web** : starter zip (`StarterBuilder`, `gabarit apply`), publication de l'image sur GHCR, API Symfony, UI Vue 3, déploiement.
+- **Ensuite** : Inertia, mises à jour automatiques de la matrice.
 
 Ne pas passer à la phase suivante tant que les tests de la phase en cours ne sont pas verts.
 
@@ -220,8 +245,9 @@ Ne pas passer à la phase suivante tant que les tests de la phase en cours ne so
 ```
 make up        # démarre l'environnement de dev (docker compose)
 make down      # arrête l'environnement
-make test      # tests unitaires + fonctionnels
-make lint      # PHPStan + PHP-CS-Fixer + lint front
+make test      # tests unitaires + génération d'un échantillon de la matrice
+make test-nightly  # toute la matrice + installeurs réels
+make lint      # PHPStan + PHP-CS-Fixer + validation de la matrice
 make matrix    # affiche la matrice
 make gen       # génère un projet d'exemple dans ./tmp/demo
 ```

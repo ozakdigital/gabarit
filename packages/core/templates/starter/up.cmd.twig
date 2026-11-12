@@ -1,0 +1,44 @@
+@echo off
+rem {{ brand.displayName }} - installation et demarrage (Windows : cmd, PowerShell).
+rem Genere par Gabarit {{ gabarit_version }}. Seul Docker Desktop est necessaire.
+rem
+rem Premier lancement : l'image Gabarit installe {{ framework_def.label }} {{ framework_version }} et le reste
+rem du projet dans ce dossier (secrets generes sur votre machine), puis demarre les conteneurs.
+setlocal
+cd /d "%~dp0.."
+
+if "%GABARIT_IMAGE%"=="" set "GABARIT_IMAGE={{ image }}"
+
+where docker >nul 2>nul
+if errorlevel 1 (
+    echo Docker est introuvable : installez Docker Desktop. 1>&2
+    exit /b 1
+)
+
+if not exist composer.json (
+    echo -^> Premiere installation : Docker telecharge {{ framework_def.label }} et prepare le projet ^(quelques minutes^)...
+    docker run --rm -it -v "%CD%:/work" -w /work %GABARIT_IMAGE% apply
+    if errorlevel 1 exit /b 1
+)
+
+echo -^> Demarrage des conteneurs...
+docker compose --env-file {{ secrets_file }} up -d --build
+if errorlevel 1 exit /b 1
+docker compose --env-file {{ secrets_file }} exec -T app composer install --no-interaction
+if errorlevel 1 exit /b 1
+{% for command in post_up_commands %}
+docker compose --env-file {{ secrets_file }} exec -T app {{ command }}
+if errorlevel 1 exit /b 1
+{% endfor %}
+
+echo.
+echo {{ brand.displayName|replace({'&': '^&'}) }} est demarre.
+echo   Application    : http://localhost:8080
+echo   Test de sante  : http://localhost:8080/api/health
+{% if is_spa %}
+echo   Front          : http://localhost:5173
+{% endif %}
+{% if services.mailpit is defined %}
+echo   Mailpit        : http://localhost:8025
+{% endif %}
+echo   Arreter        : docker compose --env-file {{ secrets_file }} down

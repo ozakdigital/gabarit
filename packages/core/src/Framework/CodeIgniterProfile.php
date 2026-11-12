@@ -87,6 +87,11 @@ final class CodeIgniterProfile implements FrameworkProfile
         return null;
     }
 
+    public function writablePaths(): array
+    {
+        return ['writable'];
+    }
+
     public function secretsFile(): string
     {
         return '.env';
