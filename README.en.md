@@ -200,7 +200,9 @@ Add `-v` to `new` to see composer and npm output live.
 
 The website works like [start.spring.io](https://start.spring.io):
 
-1. pick framework, PHP, database, frontend, services and brand, then click **Générer** (Generate);
+1. pick framework, PHP, database, frontend, services and brand, then click **Générer** (Generate).
+   The page address describes your choices: copy it (« Copier le lien » button) to share or
+   reopen the same configuration;
 2. the browser downloads a **starter** zip of a few KB (`gabarit.json`, `bin/up`, `bin/up.cmd`,
    `README.md`, optional logo);
 3. unzip it, then run:
@@ -379,6 +381,8 @@ Run after every change: `make lint` and `make test`.
 ```bash
 make web        # builds and starts the site: http://localhost:8090
 make web-down   # stops it
+make test-ui    # interface component tests (Vitest)
+make test-e2e   # full journey on the running site (Playwright)
 ```
 
 When working on the interface: `cd apps/web/ui && npm install && npm run dev`

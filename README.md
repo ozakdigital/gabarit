@@ -201,7 +201,9 @@ Ajoutez `-v` à `new` pour voir en direct la sortie de composer et npm.
 
 Le site fonctionne comme [start.spring.io](https://start.spring.io) :
 
-1. choisissez framework, PHP, base, front, services et marque, puis cliquez sur **Générer** ;
+1. choisissez framework, PHP, base, front, services et marque, puis cliquez sur **Générer**.
+   L'adresse de la page décrit vos choix : copiez-la (bouton « Copier le lien ») pour partager
+   ou retrouver la même configuration ;
 2. le navigateur télécharge un **starter** zip de quelques Ko (`gabarit.json`, `bin/up`, `bin/up.cmd`,
    `README.md`, logo éventuel) ;
 3. décompressez-le, puis lancez :
@@ -382,6 +384,8 @@ reconstruit l'image.
 ```bash
 make web        # construit et lance le site : http://localhost:8090
 make web-down   # l'arrête
+make test-ui    # tests de composants de l'interface (Vitest)
+make test-e2e   # parcours complet sur le site lancé (Playwright)
 ```
 
 En développement de l'interface : `cd apps/web/ui && npm install && npm run dev`
