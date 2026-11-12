@@ -12,7 +12,7 @@ jobs:
     name: Lint (PHPStan 8, PHP-CS-Fixer)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
@@ -24,7 +24,7 @@ jobs:
     name: Tests (cœur, CLI, API) + échantillon de la matrice
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
@@ -34,30 +34,52 @@ jobs:
       - run: make test RUN=
 
   ui:
-    name: Interface web (types + build)
+    name: Interface web (types, build, tests de composants)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/web/ui
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: npm ci --no-audit --no-fund
       - run: npm run build
+      - run: npm test
+
+  e2e:
+    name: Parcours complet du site (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Démarre le site (interface + API)
+        run: docker compose -f apps/web/compose.yaml up -d --build --wait
+        env:
+          APP_SECRET: ci-only-not-a-secret
+      - run: npm ci --no-audit --no-fund
+        working-directory: apps/web/ui
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web/ui
+      - run: npx playwright test
+        working-directory: apps/web/ui
+        env:
+          E2E_URL: http://localhost:8090
 
   nightly:
     name: Nightly (installeurs réels)
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
           extensions: intl, zip, pdo_pgsql
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: composer install --no-interaction --no-progress

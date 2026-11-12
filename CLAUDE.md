@@ -248,6 +248,8 @@ make down      # arrête l'environnement
 make test      # tests unitaires + génération d'un échantillon de la matrice
 make test-nightly  # toute la matrice + installeurs réels
 make lint      # PHPStan + PHP-CS-Fixer + validation de la matrice
+make test-ui   # tests de composants de l'interface (Vitest)
+make test-e2e  # parcours complet sur le site lancé par `make web` (Playwright)
 make matrix    # affiche la matrice
 make gen       # génère un projet d'exemple dans ./tmp/demo
 ```

@@ -4,7 +4,7 @@ export COMPOSE_BAKE := false
 RUN ?= docker compose run --rm -T php
 
 .DEFAULT_GOAL := help
-.PHONY: help up down install test test-nightly lint lint-ui cs-fix matrix gen doctor sh web web-down
+.PHONY: help up down install test test-nightly lint lint-ui test-ui test-e2e cs-fix matrix gen doctor sh web web-down
 
 help: ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-13s %s\n", $$1, $$2}'
@@ -36,6 +36,14 @@ lint: ## PHPStan niveau 8 + PHP-CS-Fixer (vérification) + validation de la matr
 
 lint-ui: ## Vérifie les types de l'interface web (vue-tsc), dans un conteneur Node
 	docker run --rm -v "$(CURDIR)/apps/web/ui:/ui" -v /ui/node_modules -w /ui node:22-alpine sh -c "npm ci --no-audit --no-fund && npx vue-tsc -b"
+
+test-ui: ## Tests de composants de l'interface web (Vitest), dans un conteneur Node
+	docker run --rm -v "$(CURDIR)/apps/web/ui:/ui" -v /ui/node_modules -w /ui node:22-alpine sh -c "npm ci --no-audit --no-fund && npm test"
+
+test-e2e: ## Parcours complet sur le site lancé par `make web` (Playwright, dans un conteneur)
+	docker run --rm --add-host=host.docker.internal:host-gateway -e E2E_URL=http://host.docker.internal:$${WEB_PORT:-8090} \
+		-v "$(CURDIR)/apps/web/ui:/ui" -v /ui/node_modules -w /ui mcr.microsoft.com/playwright:v1.65.0-noble \
+		sh -c "npm ci --no-audit --no-fund && npx playwright test"
 
 cs-fix: ## Corrige le style de code
 	$(RUN) vendor/bin/php-cs-fixer fix

@@ -1,5 +1,5 @@
 import vue from '@vitejs/plugin-vue'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -14,5 +14,11 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  // Tests de composants (npm test) ; le scénario de bout en bout est dans e2e/ (Playwright).
+  test: {
+    environment: 'jsdom',
+    include: ['tests/unit/**/*.spec.ts'],
+    setupFiles: ['tests/setup.ts'],
   },
 })

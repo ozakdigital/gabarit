@@ -7,3 +7,5 @@ tmp
 packages/core/tests
 apps/cli/tests
 apps/web/api/tests
+**/test-results
+**/playwright-report
