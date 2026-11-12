@@ -2,11 +2,15 @@
 
 [Français](README.md) · **English**
 
-A **white-label** PHP application skeleton generator. You pick a framework, a PHP version, a
-database, a frontend and services; Gabarit produces a complete, dockerized, branded project that
-starts with a single command: `make up`.
+A **white-label** PHP project generator. Pick your framework (Symfony, Laravel, CodeIgniter, Slim),
+your database, your frontend and your brand: Gabarit creates a complete, dockerized project, ready
+to start. **Docker is all you need** on your machine.
 
-The project's architecture rules are in [CLAUDE.md](CLAUDE.md) (in French).
+Two ways to use it:
+
+- **From the command line**: install the CLI once, then `gabarit new my-app`.
+- **From the website**: pick your options, download the zip, unzip it and run `bin/up`. Docker
+  installs and starts everything.
 
 ---
 
@@ -333,6 +337,8 @@ that the application starts and responds), `make help`.
 ---
 
 ## 7. Developing Gabarit
+
+The project's architecture rules are in [CLAUDE.md](CLAUDE.md) (in French).
 
 To work on Gabarit itself (not just use it), you also need `make` (on Windows:
 `choco install make`):

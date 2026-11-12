@@ -2,11 +2,15 @@
 
 **Français** · [English](README.en.md)
 
-Générateur de squelettes d'applications PHP **en marque blanche**. Vous choisissez un framework, une
-version de PHP, une base de données, un front et des services ; Gabarit produit un projet complet,
-dockerisé, à votre marque, qui démarre avec une seule commande : `make up`.
+Générateur de projets PHP **en marque blanche**. Choisissez votre framework (Symfony, Laravel,
+CodeIgniter, Slim), votre base de données, votre front et votre marque : Gabarit crée un projet
+complet et dockerisé, prêt à démarrer. **Seul Docker est nécessaire** sur votre machine.
 
-Les règles d'architecture du projet sont dans [CLAUDE.md](CLAUDE.md).
+Deux façons de l'utiliser :
+
+- **En ligne de commande** : installez la CLI une fois, puis `gabarit new mon-app`.
+- **Depuis le site** : choisissez vos options, téléchargez le zip, décompressez-le et lancez
+  `bin/up`. Docker installe et démarre tout.
 
 ---
 
@@ -334,6 +338,8 @@ Autres commandes : `make down`, `make logs`, `make sh` (shell dans le conteneur 
 ---
 
 ## 7. Développer Gabarit
+
+Les règles d'architecture du projet sont dans [CLAUDE.md](CLAUDE.md).
 
 Pour travailler sur Gabarit lui-même (pas seulement l'utiliser), il faut en plus `make`
 (sous Windows : `choco install make`) :
