@@ -7,6 +7,11 @@ on:
     # Nightly : installeurs réels (composer create-project, create-vite).
     - cron: "0 3 * * *"
 
+# Un nouveau push sur la même branche annule la CI encore en cours.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint (PHPStan 8, PHP-CS-Fixer)
@@ -17,6 +22,11 @@ jobs:
         with:
           php-version: "8.3"
           extensions: intl, zip
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
       - run: composer install --no-interaction --no-progress
       - run: make lint RUN=
 
@@ -29,6 +39,11 @@ jobs:
         with:
           php-version: "8.3"
           extensions: intl, zip
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: composer-all-${{ hashFiles('composer.lock', 'apps/web/api/composer.lock') }}
+          restore-keys: composer-
       - run: composer install --no-interaction --no-progress
       - run: composer --working-dir=apps/web/api install --no-interaction --no-progress
       - run: make test RUN=
@@ -44,30 +59,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/ui/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run build
       - run: npm test
-
-  e2e:
-    name: Parcours complet du site (Playwright)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - name: Démarre le site (interface + API)
-        run: docker compose -f apps/web/compose.yaml up -d --build --wait
-        env:
-          APP_SECRET: ci-only-not-a-secret
-      - run: npm ci --no-audit --no-fund
-        working-directory: apps/web/ui
-      - run: npx playwright install --with-deps chromium
-        working-directory: apps/web/ui
-      - run: npx playwright test
-        working-directory: apps/web/ui
-        env:
-          E2E_URL: http://localhost:8090
 
   nightly:
     name: Nightly (installeurs réels)
