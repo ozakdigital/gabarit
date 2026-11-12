@@ -1,3 +1,7 @@
 * text=auto eol=lf
 *.png binary
 apps/cli/bin/gabarit text eol=lf
+*.cmd text eol=crlf
+bin/gabarit text eol=lf
+*.ps1 text eol=crlf
+install.sh text eol=lf

@@ -1,0 +1,7 @@
+.git
+vendor
+var
+tmp
+node_modules
+packages/core/tests
+apps/cli/tests

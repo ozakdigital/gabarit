@@ -1,0 +1,60 @@
+#!/usr/bin/env sh
+# Commande `gabarit` (Linux, macOS, Git Bash sous Windows).
+#
+# Exécute la CLI dans l'image Docker `gabarit-cli`, avec le dossier courant monté :
+# `gabarit new mon-app` crée donc le projet dans le dossier où vous êtes.
+# Seul Docker est nécessaire sur la machine.
+#
+# Commandes propres au lanceur :
+#   gabarit self-update   met à jour Gabarit (git pull) et reconstruit l'image
+set -eu
+
+IMAGE=${GABARIT_IMAGE:-gabarit-cli}
+# Dossier d'installation de Gabarit (lien symbolique résolu).
+SELF=$0
+while [ -L "$SELF" ]; do
+    LINK=$(readlink "$SELF")
+    case $LINK in /*) SELF=$LINK ;; *) SELF=$(dirname -- "$SELF")/$LINK ;; esac
+done
+GABARIT_HOME=$(CDPATH= cd -- "$(dirname -- "$SELF")/.." && pwd)
+
+if ! command -v docker >/dev/null 2>&1; then
+    echo "gabarit : Docker est introuvable. Installez Docker Desktop (Windows, macOS) ou Docker Engine (Linux)." >&2
+    exit 2
+fi
+
+build_image() {
+    echo "Construction de l'image $IMAGE…" >&2
+    docker build -q -f "$GABARIT_HOME/docker/cli/Dockerfile" -t "$IMAGE" "$GABARIT_HOME" >/dev/null
+}
+
+if [ "${1:-}" = "self-update" ]; then
+    if [ -d "$GABARIT_HOME/.git" ]; then
+        git -C "$GABARIT_HOME" pull --ff-only
+    fi
+    build_image
+    echo "Gabarit est à jour." >&2
+    exit 0
+fi
+
+# Première utilisation : l'image n'existe pas encore.
+docker image inspect "$IMAGE" >/dev/null 2>&1 || build_image
+
+WORKDIR=$(pwd)
+USER_FLAG=""
+if pwd -W >/dev/null 2>&1; then
+    # Git Bash : Docker Desktop attend des chemins Windows (C:/…).
+    WORKDIR=$(pwd -W)
+    export MSYS_NO_PATHCONV=1
+else
+    # Linux, macOS : les fichiers générés appartiennent à l'utilisateur, pas à root.
+    USER_FLAG="--user $(id -u):$(id -g)"
+fi
+
+# Pseudo-terminal seulement dans un terminal (menus interactifs).
+TTY_FLAG=""
+[ -t 0 ] && [ -t 1 ] && TTY_FLAG="-t"
+
+# Les arguments de l'utilisateur vont à la CLI, après le nom de l'image.
+# shellcheck disable=SC2086
+exec docker run --rm -i $TTY_FLAG $USER_FLAG -v "$WORKDIR:/work" -w /work "$IMAGE" "$@"

@@ -47,7 +47,14 @@ final class DoctorCommand extends Command
             'usage' => 'Gabarit lui-même (PHP ≥ 8.3, ext-zip)',
         ]];
 
+        // Lancée via la commande `gabarit` (image Docker) : Docker est sur la machine, pas dans le conteneur.
+        $inContainer = '1' === getenv('GABARIT_IN_CONTAINER');
+
         foreach (self::TOOLS as $tool => [$command, $required, $usage]) {
+            if ($inContainer && 'docker' === $command[0]) {
+                $checks[] = ['tool' => $tool, 'ok' => true, 'required' => $required, 'version' => 'sur la machine hôte (utilisé par le lanceur)', 'usage' => $usage];
+                continue;
+            }
             $version = null;
             if ($this->process->has($command[0])) {
                 try {

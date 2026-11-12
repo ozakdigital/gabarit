@@ -55,42 +55,76 @@ To see the current matrix: `make matrix`.
 
 | Tool | Why |
 |---|---|
-| **Docker** with Docker Compose v2 | Gabarit runs in a container, and so do the generated projects |
-| **make** (recommended) | command shortcuts. On Windows: `choco install make` |
-| **git** | to get Gabarit |
+| **Docker** (Docker Desktop on Windows and macOS, Docker Engine on Linux) | the CLI runs in a container, and so do the generated projects |
+| **git** | to download and update Gabarit |
 
-**You don't need PHP, Composer or Node on your machine**: Gabarit's container ships PHP 8.3,
-Composer, Node 24, git and the Docker client.
+**You don't need PHP, Composer or Node on your machine**: the `gabarit-cli` image ships PHP 8.3,
+Composer, Node, git and Gabarit's code.
 
-### Installation
+### One-command install
+
+**Linux and macOS** (terminal):
 
 ```bash
-git clone <repository-url> gabarit
-cd gabarit
-make up      # builds Gabarit's image and installs its dependencies (a few minutes the first time)
-make doctor  # checks that composer, git, node, npm and docker are available in the container
+curl -fsSL https://raw.githubusercontent.com/ozakdigital/gabarit/main/install.sh | sh
 ```
 
-`make up` runs `docker compose up -d --build`, then `composer install` in the `php` container.
+**Windows** (PowerShell):
 
-> **Without make**: every target in the [Makefile](Makefile) is a plain Docker command, for example
-> `docker compose run --rm -T php composer install`. In Git Bash (Windows), prefix commands with
-> `MSYS_NO_PATHCONV=1` to stop automatic path conversion, and export `COMPOSE_BAKE=false` if the
-> build fails with an "additional privileges requested" message.
+```powershell
+irm https://raw.githubusercontent.com/ozakdigital/gabarit/main/install.ps1 | iex
+```
+
+The installer:
+
+1. checks that Docker and git are present and that Docker responds;
+2. downloads Gabarit into `~/.gabarit` (`%USERPROFILE%\.gabarit` on Windows), or updates it;
+3. builds the `gabarit-cli` Docker image (a few minutes the first time);
+4. installs the `gabarit` command: a link in `~/.local/bin` (Linux, macOS), or `.gabarit\bin` added
+   to the user PATH (Windows).
+
+Then open **a new terminal** and check:
+
+```bash
+gabarit --version
+gabarit doctor
+```
+
+> On Linux and macOS, if `~/.local/bin` isn't in your PATH, the installer prints the line to add to
+> `~/.bashrc` or `~/.zshrc`. The command also works in Git Bash on Windows.
+
+### Updating, uninstalling
+
+```bash
+gabarit self-update     # fetches the latest version and rebuilds the image
+```
+
+To uninstall: delete the `~/.gabarit` folder, the `~/.local/bin/gabarit` link (or the
+`.gabarit\bin` PATH entry on Windows), then the image: `docker image rm gabarit-cli`.
 
 ---
 
 ## 3. Generating a project
 
-The CLI is called `gabarit`. It runs inside the container:
+Go to the folder where you keep your projects, then:
 
 ```bash
-docker compose run --rm php php apps/cli/bin/gabarit new my-app
+gabarit new my-app
 ```
 
-Gabarit's folder is mounted in the container as `/app`: **the project is created in `./my-app`,
-next to Gabarit's code**, unless you pick another folder with `--dir` (see
-[Generating elsewhere](#generating-in-another-folder)).
+The project is created in **`./my-app`, under the current folder**. The `gabarit` command runs the
+CLI in the Docker image with the current folder mounted; on Linux and macOS, the created files
+belong to you (not to `root`).
+
+Available commands:
+
+| Command | Purpose |
+|---|---|
+| `gabarit new <name>` | generates a project (interactive or with options) |
+| `gabarit matrix` | shows the available combinations (`--json` for a machine) |
+| `gabarit doctor` | checks the required tools |
+| `gabarit self-update` | updates Gabarit |
+| `gabarit help <command>` | detailed help for a command |
 
 ### Interactive mode (default)
 
@@ -114,7 +148,7 @@ A question is skipped when there is only one possible answer (for example the La
 Every answer is passed as an option:
 
 ```bash
-docker compose run --rm php php apps/cli/bin/gabarit new shop \
+gabarit new shop \
     --framework=laravel --fw-version=13 --php=8.3 \
     --db=mariadb --frontend=blade --services=redis,mailpit \
     --brand-name="Demo Shop" --namespace='Acme\Shop' \
@@ -133,8 +167,8 @@ docker compose run --rm php php apps/cli/bin/gabarit new shop \
 | `--brand-name` | letters, digits, spaces, `. , ' & -` | derived from the name (`my-app` → `My App`) |
 | `--namespace` | `Acme` or `Acme\Shop` (PascalCase) | `App` |
 | `--primary-color`, `--secondary-color` | `#rrggbb` | `#4f46e5`, `#0f172a` |
-| `--logo` | path to a PNG or SVG (1 MB max, SVG without scripts) | none |
-| `--dir` | target folder (must be empty or missing) | `./<name>` |
+| `--logo` | path **relative to the current folder** to a PNG or SVG (1 MB max, SVG without scripts) | none |
+| `--dir` | target folder, **relative to the current folder** (empty or missing) | `./<name>` |
 | `--no-git` | don't create a git repository | git enabled |
 | `--json` | machine-readable output (implies `--no-interaction`) | — |
 
@@ -149,25 +183,13 @@ An incompatible combination is rejected **before** anything is installed, with a
         phpVersion : PHP 8.2 n'est pas compatible avec Laravel 13 (compatibles : 8.3, 8.4).
 ```
 
-### Generating in another folder
-
-The container only sees Gabarit's folder. To generate elsewhere, mount the folder you want:
-
-```bash
-docker compose run --rm -v "$HOME/projects:/projects" php \
-    php apps/cli/bin/gabarit new my-app --dir=/projects/my-app
-```
-
-### Other commands
-
-```bash
-docker compose run --rm php php apps/cli/bin/gabarit matrix          # available combinations
-docker compose run --rm php php apps/cli/bin/gabarit matrix --json   # same, for a machine
-docker compose run --rm php php apps/cli/bin/gabarit doctor          # available tools
-make gen                                                             # sample project in ./tmp/demo
-```
+> The container only sees the current folder: `--dir` and `--logo` must point **inside** it
+> (`--dir=clients/acme`, `--logo=./logo.svg`). To generate elsewhere, `cd` to that folder first.
 
 Add `-v` to `new` to see composer and npm output live.
+
+> **Windows scripts (cmd, PowerShell)**: if input is redirected (no terminal), set
+> `GABARIT_NO_TTY=1` before calling `gabarit`.
 
 ---
 
@@ -286,6 +308,24 @@ that the application starts and responds), `make help`.
 ---
 
 ## 7. Developing Gabarit
+
+To work on Gabarit itself (not just use it), you also need `make` (on Windows:
+`choco install make`):
+
+```bash
+git clone https://github.com/ozakdigital/gabarit.git
+cd gabarit
+make up      # dev container (PHP 8.3, Composer, Node, Docker client) + dependencies
+make test
+```
+
+To try your changes with the real command: `GABARIT_SOURCE=$(pwd) sh install.sh` (Linux, macOS)
+or `$env:GABARIT_SOURCE = (Get-Location); .\install.ps1` (Windows), which install `gabarit` from
+your local copy. After a change, `gabarit self-update` rebuilds the image.
+
+> **Without make**: every target in the [Makefile](Makefile) is a plain Docker command, for example
+> `docker compose run --rm -T php composer install`. In Git Bash, prefix with `MSYS_NO_PATHCONV=1`,
+> and export `COMPOSE_BAKE=false` if the build fails with "additional privileges requested".
 
 | Command | Purpose |
 |---|---|
